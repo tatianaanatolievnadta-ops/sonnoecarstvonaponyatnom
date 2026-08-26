@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#121a2e" />
+  <meta name="description" content="Сонное царство — расшифровка снов, лунный календарь, тесты и советы" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Сонное царство" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Сонное царство</title>
+</head>
+<body>
+  <div class="sky" aria-hidden="true">
+    <div class="glow glow-a"></div>
+    <div class="glow glow-b"></div>
+    <div class="stars"></div>
+  </div>
+
+  <div id="app" class="app">
+    <!-- HOME / DREAMS -->
+    <section class="view active" id="view-dreams" data-view="dreams">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Сонное царство</p>
+          <h1 class="page-title">Ваш сон</h1>
+        </div>
+        <button type="button" class="icon-btn" id="btn-new-dream" aria-label="Новый сон" title="Новый сон">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </header>
+
+      <div class="hero-banner">
+        <img src="images/hero-dreams.png" alt="" class="hero-img" />
+        <div class="hero-copy">
+          <h2>Расскажите, что приснилось</h2>
+          <p>Напишите или наговорите — я уточню детали и дам расшифровку</p>
+        </div>
+      </div>
+
+      <div class="chat" id="chat" role="log" aria-live="polite"></div>
+
+      <div class="composer" id="dream-composer">
+        <div class="composer-inner">
+          <textarea id="input" rows="1" placeholder="Опишите сон…" enterkeyhint="send" autocomplete="off"></textarea>
+          <button type="button" class="icon-btn mic" id="btn-mic" aria-label="Голосовой ввод">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="9" y="3" width="6" height="11" rx="3"/>
+              <path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>
+            </svg>
+          </button>
+          <button type="button" class="send" id="btn-send" aria-label="Отправить">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3.4 20.6 21 12 3.4 3.4l.1 6.8L15 12 3.5 13.8z"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MOON -->
+    <section class="view" id="view-moon" data-view="moon">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Сонное царство</p>
+          <h1 class="page-title">Луна сегодня</h1>
+        </div>
+      </header>
+      <div class="scroll-pad" id="moon-root"></div>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="view" id="view-quiz" data-view="quiz">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Игра</p>
+          <h1 class="page-title">Тест о снах</h1>
+        </div>
+      </header>
+      <div class="scroll-pad" id="quiz-root"></div>
+    </section>
+
+    <!-- ARTICLES -->
+    <section class="view" id="view-articles" data-view="articles">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Полезно знать</p>
+          <h1 class="page-title">Статьи</h1>
+        </div>
+      </header>
+      <div class="scroll-pad" id="articles-root"></div>
+    </section>
+
+    <!-- PROFILE -->
+    <section class="view" id="view-profile" data-view="profile">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Настройки</p>
+          <h1 class="page-title">Профиль</h1>
+        </div>
+      </header>
+      <div class="scroll-pad" id="profile-root"></div>
+    </section>
+  </div>
+
+  <nav class="tabbar" aria-label="Главное меню">
+    <button type="button" class="tab active" data-nav="dreams" aria-current="page">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3c-2 3.5-6 5-6 9a6 6 0 0 0 12 0c0-4-4-5.5-6-9z"/><path d="M9 14c.5 1.5 1.5 2.5 3 3"/></svg>
+      <span>Сны</span>
+    </button>
+    <button type="button" class="tab" data-nav="moon">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 14.5A8.5 8.5 0 1 1 10.5 4 7 7 0 0 0 20 14.5z"/></svg>
+      <span>Луна</span>
+    </button>
+    <button type="button" class="tab" data-nav="quiz">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M8.5 10a3.5 3.5 0 1 1 5.2 3c-.8.6-1.2 1-1.2 2"/><circle cx="12" cy="17.2" r="0.8" fill="currentColor"/></svg>
+      <span>Тест</span>
+    </button>
+    <button type="button" class="tab" data-nav="articles">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h10a2 2 0 0 1 2 2v14l-7-3-7 3V6a2 2 0 0 1 2-2z"/><path d="M19 6h0a2 2 0 0 1 2 2v12"/></svg>
+      <span>Статьи</span>
+    </button>
+    <button type="button" class="tab" data-nav="profile">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 19a7 7 0 0 1 14 0"/></svg>
+      <span>Профиль</span>
+    </button>
+  </nav>
+
+  <div class="toast" id="toast" hidden role="status"></div>
+  <div class="sheet" id="sheet" hidden>
+    <div class="sheet-backdrop" data-close-sheet></div>
+    <div class="sheet-panel" role="dialog" aria-modal="true">
+      <div class="sheet-handle"></div>
+      <div id="sheet-body"></div>
+    </div>
+  </div>
+
+  <script src="data/dreams.js"></script>
+  <script src="data/articles.js"></script>
+  <script src="data/quiz.js"></script>
+  <script src="data/moon-tips.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/moon.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
