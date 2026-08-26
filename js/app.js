@@ -22,6 +22,9 @@
   let pendingDream = "";
   let pendingReading = "";
 
+  let articleFilter = "all";
+  let currentAudio = null;
+
   function showToast(msg) {
     toast.hidden = false;
     toast.textContent = msg;
@@ -42,7 +45,12 @@
     if (name === "moon") renderMoon();
     if (name === "quiz") renderQuiz();
     if (name === "articles") renderArticles();
+    if (name === "meditate") renderMeditate();
     if (name === "profile") renderProfile();
+    if (name !== "meditate" && currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+    }
   }
 
   document.querySelectorAll(".tab").forEach((tab) => {
@@ -82,7 +90,7 @@
 
   const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  async function botSay(replies, actions, image) {
+  async function botSay(replies, actions) {
     document.querySelectorAll(".choice-row").forEach((n) => n.remove());
 
     for (const reply of replies) {
@@ -102,10 +110,6 @@
 
     if (actions && actions.length) {
       addChoiceButtons(actions);
-    }
-
-    if (image) {
-      await showDreamImage(image);
     }
   }
 
@@ -130,73 +134,11 @@
 
     const result = DreamEngine.processAction(session, actionId);
     session = result.session;
-    await botSay(result.replies || [], result.actions, result.image);
+    await botSay(result.replies || [], result.actions);
 
     busy = false;
     btnSend.disabled = false;
     input.focus();
-  }
-
-  function buildImagePrompt(image) {
-    const symbols = (image.symbols || []).slice(0, 4).join(", ");
-    const dreamShort = (image.dream || "").slice(0, 220).replace(/\s+/g, " ");
-    if (image.kind === "meaning") {
-      return (
-        "Dreamy mystical illustration about the meaning of a dream, soft indigo and gold moonlight, " +
-        "symbolic atmosphere, elegant painterly digital art, no text, no letters, calm mood. " +
-        (symbols ? `Symbols: ${symbols}. ` : "") +
-        "Inspired by: " + dreamShort
-      );
-    }
-    return (
-      "Cinematic dream scene illustration, soft night light, painterly, emotional, beautiful, " +
-      "no text, no letters, no watermark. Scene: " + dreamShort +
-      (symbols ? `. Motifs: ${symbols}` : "")
-    );
-  }
-
-  async function showDreamImage(image) {
-    const typing = showTyping();
-    const prompt = buildImagePrompt(image);
-    const url =
-      "https://image.pollinations.ai/prompt/" +
-      encodeURIComponent(prompt) +
-      "?width=768&height=768&nologo=true&refine=true&seed=" +
-      Math.floor(Math.random() * 100000);
-
-    const wrap = el("div", "msg bot dream-art");
-    const label = el("span", "label", image.kind === "meaning" ? "Картинка смысла" : "Картинка сна");
-    const img = document.createElement("img");
-    img.alt = "Визуализация сна";
-    img.className = "dream-art-img";
-    img.loading = "lazy";
-
-    await new Promise((resolve) => {
-      img.onload = resolve;
-      img.onerror = resolve;
-      img.src = url;
-      setTimeout(resolve, 12000);
-    });
-
-    typing.remove();
-    wrap.appendChild(label);
-    if (img.naturalWidth) {
-      wrap.appendChild(img);
-      const note = el("p", "art-note", "Можно сохранить картинку долгим нажатием.");
-      wrap.appendChild(note);
-    } else {
-      wrap.appendChild(
-        document.createTextNode(
-          "Не удалось загрузить картинку (нужен интернет). Попробуйте ещё раз позже — расскажите сон заново и в конце выберите картинку."
-        )
-      );
-    }
-    chat.appendChild(wrap);
-    chat.scrollTop = chat.scrollHeight;
-
-    await botSay([
-      "Готово. Если приснится ещё — я здесь. Можно нажать «+» для нового сна."
-    ]);
   }
 
   async function handleSend() {
@@ -216,7 +158,7 @@
 
     const result = DreamEngine.processUserMessage(session, text);
     session = result.session;
-    await botSay(result.replies || [], result.actions, result.image);
+    await botSay(result.replies || [], result.actions);
     busy = false;
     btnSend.disabled = false;
     input.focus();
@@ -409,6 +351,16 @@
             }
           </div>
         </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <p class="eyebrow">Циклы сна</p>
+          <h3>Калькулятор отхода ко сну</h3>
+          <p>Подберём время, чтобы проснуться ближе к концу цикла — примерно по 90 минут. Норма зависит от возраста.</p>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="calc-open">Рассчитать сон</button>
+          </div>
+        </div>
       </div>`;
     $("quiz-start").onclick = () => {
       quizIndex = 0;
@@ -417,6 +369,7 @@
     };
     const last = $("quiz-show-last");
     if (last) last.onclick = () => showQuizResult(saved);
+    $("calc-open").onclick = () => paintSleepCalc();
   }
 
   function paintQuestion() {
@@ -482,7 +435,7 @@
             <p>${result.tip}</p>
           </div>
           <div class="btn-row">
-            <button type="button" class="btn btn-primary" id="quiz-again">Пройти ещё раз</button>
+            <button type="button" class="btn btn-primary" id="quiz-again">К тестам</button>
             <button type="button" class="btn btn-ghost" id="quiz-to-dreams">Рассказать сон</button>
           </div>
         </div>
@@ -491,31 +444,196 @@
     $("quiz-to-dreams").onclick = () => navigate("dreams");
   }
 
+  let calcMode = "wake";
+  let calcAge = "adult";
+  let calcTime = "07:00";
+  let calcFall = 15;
+
+  function pad2(n) {
+    return String(n).padStart(2, "0");
+  }
+  function minsToLabel(total) {
+    const day = 24 * 60;
+    total = ((total % day) + day) % day;
+    return pad2(Math.floor(total / 60)) + ":" + pad2(total % 60);
+  }
+  function parseTime(val) {
+    const parts = String(val || "07:00").split(":");
+    return (Number(parts[0]) || 0) * 60 + (Number(parts[1]) || 0);
+  }
+
+  function paintSleepCalc() {
+    const root = $("quiz-root");
+    const cfg = window.SLEEP_CALC || { cycleMin: 90, cycles: [4, 5, 6], ages: [], fallAsleepMin: 15 };
+    const ages = cfg.ages || [];
+    const age = ages.find((a) => a.id === calcAge) || ages[6] || ages[0];
+    const cycle = cfg.cycleMin || 90;
+    const target = parseTime(calcTime);
+    const fall = Number(calcFall) || cfg.fallAsleepMin || 15;
+    const rows = (cfg.cycles || [4, 5, 6])
+      .map((n) => {
+        const sleepMin = n * cycle;
+        const hours = sleepMin / 60;
+        const inRange = age && hours >= age.minH - 0.2 && hours <= age.maxH + 0.2;
+        const when =
+          calcMode === "wake"
+            ? minsToLabel(target - fall - sleepMin)
+            : minsToLabel(target + fall + sleepMin);
+        const label = calcMode === "wake" ? "лечь около" : "встать около";
+        const word =
+          n % 10 === 1 && n % 100 !== 11
+            ? "цикл"
+            : [2, 3, 4].indexOf(n % 10) >= 0 && [12, 13, 14].indexOf(n % 100) < 0
+              ? "цикла"
+              : "циклов";
+        return `
+          <li class="calc-row ${inRange ? "in" : ""}">
+            <b>${when}</b>
+            <span>${label} · ${n} ${word} · ${hours % 1 ? hours.toFixed(1).replace(".", ",") : hours} ч сна</span>
+          </li>`;
+      })
+      .join("");
+
+    root.innerHTML = `
+      <div class="card"><div class="card-body">
+        <p class="eyebrow">Калькулятор</p>
+        <h3>Когда лечь и когда встать</h3>
+        <p class="note">Цикл сна у взрослых часто около 90 минут. Лучше просыпаться ближе к концу цикла. Это ориентир, не диагноз.</p>
+
+        <label class="note" for="calc-age">Возраст</label>
+        <select class="field" id="calc-age">
+          ${ages
+            .map(
+              (a) =>
+                `<option value="${a.id}" ${a.id === calcAge ? "selected" : ""}>${a.label} · ${a.hours} ч</option>`
+            )
+            .join("")}
+        </select>
+        ${
+          age
+            ? `<p class="note">Для этого возраста обычно нужно <b>${age.hours} часов</b> сна в сутки (с учётом дневного у малышей).</p>`
+            : ""
+        }
+
+        <div class="chip-row" id="calc-mode">
+          <button type="button" class="chip ${calcMode === "wake" ? "on" : ""}" data-cm="wake">Хочу встать в</button>
+          <button type="button" class="chip ${calcMode === "bed" ? "on" : ""}" data-cm="bed">Лягу в</button>
+        </div>
+
+        <label class="note" for="calc-time">${calcMode === "wake" ? "Подъём" : "Отход ко сну"}</label>
+        <input class="field" id="calc-time" type="time" value="${escapeAttr(calcTime)}" />
+
+        <label class="note" for="calc-fall">Пока засыпаете, минут</label>
+        <select class="field" id="calc-fall">
+          ${[10, 15, 20, 30]
+            .map((m) => `<option value="${m}" ${m === fall ? "selected" : ""}>${m}</option>`)
+            .join("")}
+        </select>
+
+        <ul class="calc-list">${rows}</ul>
+        <p class="note">Подсвечены варианты ближе к норме для выбранного возраста. Подробнее — в статье «Сколько спать по возрасту».</p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-ghost" id="calc-article">Читать про возраст</button>
+          <button type="button" class="btn btn-primary" id="calc-back">К тестам</button>
+        </div>
+      </div></div>`;
+
+    const sync = () => {
+      calcAge = $("calc-age").value;
+      calcTime = $("calc-time").value || calcTime;
+      calcFall = Number($("calc-fall").value) || 15;
+      paintSleepCalc();
+    };
+    $("calc-age").onchange = sync;
+    $("calc-time").onchange = sync;
+    $("calc-fall").onchange = sync;
+    root.querySelectorAll("[data-cm]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const next = btn.dataset.cm;
+        if (next !== calcMode) {
+          calcMode = next;
+          calcTime = next === "wake" ? "07:00" : "23:00";
+        }
+        paintSleepCalc();
+      });
+    });
+    $("calc-back").onclick = () => renderQuiz();
+    $("calc-article").onclick = () => {
+      navigate("articles");
+      openArticle("sleep-by-age");
+    };
+  }
+
+  function pickItem(key) {
+    const box = window.AFFILIATES || { items: {}, enabled: false };
+    return box.items && box.items[key] ? box.items[key] : null;
+  }
+
+  function picksHtml(keys) {
+    const list = (keys || []).map(pickItem).filter(Boolean);
+    if (!list.length) return "";
+    const aff = window.AFFILIATES || {};
+    const cards = list
+      .map((item) => {
+        const canBuy = aff.enabled && item.url;
+        return `
+        <article class="pick-card">
+          <b>${escapeHtml(item.label)}</b>
+          <p>${escapeHtml(item.hint)}</p>
+          ${
+            canBuy
+              ? `<a class="btn btn-primary pick-link" href="${escapeAttr(item.url)}" target="_blank" rel="noopener noreferrer sponsored">Смотреть вариант</a>`
+              : ""
+          }
+        </article>`;
+      })
+      .join("");
+    const disc =
+      aff.enabled && list.some((i) => i.url)
+        ? `<p class="note pick-disc">${escapeHtml(aff.disclosure || "")}</p>`
+        : "";
+    return `<div class="picks"><p class="eyebrow">Для спальни</p>${cards}${disc}</div>`;
+  }
+
   /* ---------- Articles ---------- */
   function renderArticles() {
     const root = $("articles-root");
+    const filtered = ARTICLES.filter((a) => articleFilter === "all" || a.topic === articleFilter);
     root.innerHTML = `
       <div class="card">
         <img class="card-media" src="${imgSrc("articles-card.png")}" alt="" />
         <div class="card-body">
-          <h3>Полезное о снах</h3>
-          <p>Короткие понятные тексты — без страшилок и сложной эзотерики.</p>
+          <h3>Полезное о снах и сне</h3>
+          <p>Как засыпать, обустроить постель и бережно относиться к сновидениям.</p>
+          <div class="chip-row" id="article-filters">
+            <button type="button" class="chip ${articleFilter === "all" ? "on" : ""}" data-af="all">Все</button>
+            <button type="button" class="chip ${articleFilter === "sleep" ? "on" : ""}" data-af="sleep">Как спать</button>
+            <button type="button" class="chip ${articleFilter === "dreams" ? "on" : ""}" data-af="dreams">Сны</button>
+          </div>
         </div>
       </div>
-      ${ARTICLES.map(
-        (a, i) => `
+      ${filtered
+        .map(
+          (a, i) => `
         <button type="button" class="article-item" data-aid="${a.id}">
           <img src="${imgSrc((i % 2 === 0 ? "articles-card" : "quiz-card") + ".png")}" alt="" />
           <div>
             <h3>${a.title}</h3>
             <p>${a.teaser}</p>
-            <div class="meta">${a.minutes} мин чтения</div>
+            <div class="meta">${a.minutes} мин · ${a.topic === "sleep" ? "как спать" : "сны"}</div>
           </div>
         </button>`
-      ).join("")}
+        )
+        .join("")}
     `;
     root.querySelectorAll("[data-aid]").forEach((btn) => {
       btn.addEventListener("click", () => openArticle(btn.dataset.aid));
+    });
+    root.querySelectorAll("[data-af]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        articleFilter = btn.dataset.af;
+        renderArticles();
+      });
     });
   }
 
@@ -528,10 +646,24 @@
       <div class="article-body" style="margin-top:1rem">
         ${a.body.map((p) => `<p>${p}</p>`).join("")}
       </div>
+      ${picksHtml(a.picks)}
       <div class="btn-row">
-        <button type="button" class="btn btn-primary" data-close-sheet>Понятно</button>
+        ${
+          a.id === "sleep-by-age"
+            ? `<button type="button" class="btn btn-primary" id="go-calc">Открыть калькулятор</button>`
+            : ""
+        }
+        <button type="button" class="btn ${a.id === "sleep-by-age" ? "btn-ghost" : "btn-primary"}" data-close-sheet>Понятно</button>
       </div>`;
     sheet.hidden = false;
+    const go = $("go-calc");
+    if (go) {
+      go.onclick = () => {
+        sheet.hidden = true;
+        navigate("quiz");
+        paintSleepCalc();
+      };
+    }
   }
 
   sheet.addEventListener("click", (e) => {
@@ -539,6 +671,80 @@
       sheet.hidden = true;
     }
   });
+
+  /* ---------- Meditations ---------- */
+  function renderMeditate() {
+    const root = $("meditate-root");
+    const tracks = window.MEDITATIONS || [];
+    root.innerHTML = `
+      <div class="card">
+        <img class="card-media" src="${imgSrc("moon-card.png")}" alt="" />
+        <div class="card-body">
+          <h3>Звуки ко сну</h3>
+          <p>417, 432, 396 и 174 Гц — плюс место под ваш голос. Положите mp3 в папку <b>media</b> с именами из карточек.</p>
+          <p class="note">Громкость — едва слышно. Это фон, не концерт. Не для вождения и не вместо врача.</p>
+        </div>
+      </div>
+      ${tracks
+        .map(
+          (t) => `
+        <article class="med-card" data-mid="${t.id}">
+          <div class="med-meta">
+            <span>${t.hz ? t.hz + " Гц" : "Голос"}</span>
+            <span>${t.minutes} мин</span>
+          </div>
+          <h3>${escapeHtml(t.title)}</h3>
+          <p>${escapeHtml(t.teaser)}</p>
+          <audio class="med-audio" controls preload="none" src="${escapeAttr(t.file)}" data-file="${escapeAttr(t.file)}"></audio>
+          <p class="note med-missing" hidden>Файла пока нет. Добавьте <b>${escapeHtml(t.file)}</b> — и плеер заработает.</p>
+          <button type="button" class="btn btn-ghost" data-open-med="${t.id}">Как слушать</button>
+        </article>`
+        )
+        .join("")}
+    `;
+
+    root.querySelectorAll(".med-audio").forEach((audio) => {
+      audio.addEventListener("play", () => {
+        root.querySelectorAll(".med-audio").forEach((other) => {
+          if (other !== audio) other.pause();
+        });
+        currentAudio = audio;
+      });
+      audio.addEventListener("error", () => {
+        const card = audio.closest(".med-card");
+        const hint = card && card.querySelector(".med-missing");
+        if (audio.dataset.triedRoot) {
+          if (hint) hint.hidden = false;
+          audio.hidden = true;
+          return;
+        }
+        audio.dataset.triedRoot = "1";
+        const raw = audio.dataset.file || "";
+        audio.src = raw.replace(/^media\//, "");
+        audio.load();
+      });
+    });
+
+    root.querySelectorAll("[data-open-med]").forEach((btn) => {
+      btn.addEventListener("click", () => openMeditation(btn.dataset.openMed));
+    });
+  }
+
+  function openMeditation(id) {
+    const t = (window.MEDITATIONS || []).find((x) => x.id === id);
+    if (!t) return;
+    sheetBody.innerHTML = `
+      <h2>${escapeHtml(t.title)}</h2>
+      <p class="note">${t.hz ? t.hz + " Гц · " : ""}${t.minutes} минут</p>
+      <div class="article-body" style="margin-top:1rem">
+        ${t.body.map((p) => `<p>${escapeHtml(p)}</p>`).join("")}
+      </div>
+      <p class="note">Файл: ${escapeHtml(t.file)}</p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" data-close-sheet>Понятно</button>
+      </div>`;
+    sheet.hidden = false;
+  }
 
   /* ---------- Profile ---------- */
   function switchHtml(id, checked) {

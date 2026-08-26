@@ -209,8 +209,7 @@
       symbols: [],
       emotions: [],
       questionsAsked: 0,
-      lastReading: "",
-      imageKind: null
+      lastReading: ""
     };
   }
 
@@ -333,12 +332,11 @@
 
   function handleFeedback(session, text) {
     if (isYes(text) || /устраивает|нравится|подходит|верно/i.test(text)) {
-      return offerImage(session);
+      return closeSession(session);
     }
     if (isNo(text) || /не устраивает|не то|мимо|добав/i.test(text)) {
       return askRefine(session);
     }
-    // неоднозначный ответ — считаем дополнением
     return applyRefine(session, text);
   }
 
@@ -347,7 +345,7 @@
     return {
       session,
       replies: [
-        "Хорошо. Напишите, что добавить или что было не так — я уточню расшифровку."
+        "Хорошо. Какие вопросы остались? Напишите, что добавить или что было не так — я уточню расшифровку."
       ]
     };
   }
@@ -377,90 +375,19 @@
     };
   }
 
-  function offerImage(session) {
-    session.phase = "offer_image";
-    return {
-      session,
-      replies: [
-        "Рада, что откликнулось.\n\nХотите визуальную картинку — вашего сна или смысла расшифровки?"
-      ],
-      actions: [
-        { id: "img_dream", label: "Картинку сна" },
-        { id: "img_meaning", label: "Картинку смысла" },
-        { id: "img_skip", label: "Не нужно" }
-      ]
-    };
-  }
-
-  function handleOfferImage(session, text) {
-    const n = normalize(text);
-    if (/смысл|расшифр|толкован/i.test(n)) {
-      return requestImage(session, "meaning");
-    }
-    if (/сон|сцен|визуал|картин|да|хочу|рису/i.test(n) && !/не\s*нуж|не\s*хочу|нет/i.test(n)) {
-      if (/смысл|расшифр/i.test(n)) return requestImage(session, "meaning");
-      return requestImage(session, "dream");
-    }
-    if (isNo(text) || /не нужно|не надо|не хочу|пропуст|без картин/i.test(n)) {
-      return closeSession(session);
-    }
-    if (isYes(text)) {
-      return {
-        session,
-        replies: ["Что именно нарисовать?"],
-        actions: [
-          { id: "img_dream", label: "Картинку сна" },
-          { id: "img_meaning", label: "Картинку смысла" },
-          { id: "img_skip", label: "Не нужно" }
-        ]
-      };
-    }
-    return {
-      session,
-      replies: ["Выберите: картинка сна, картинка смысла — или «не нужно»."],
-      actions: [
-        { id: "img_dream", label: "Картинку сна" },
-        { id: "img_meaning", label: "Картинку смысла" },
-        { id: "img_skip", label: "Не нужно" }
-      ]
-    };
-  }
-
-  function requestImage(session, kind) {
-    session.phase = "done";
-    session.imageKind = kind;
-    return {
-      session,
-      replies: [
-        kind === "meaning"
-          ? "Сейчас соберу картинку по смыслу расшифровки…"
-          : "Сейчас соберу картинку по вашему сну…"
-      ],
-      image: {
-        kind,
-        dream: session.dreamText,
-        reading: session.lastReading || "",
-        symbols: (session.symbols || []).map((s) => s.title)
-      }
-    };
-  }
-
   function closeSession(session) {
     session.phase = "done";
     return {
       session,
       replies: [
-        "Хорошо. Если приснится ещё — расскажите, я рядом.\nМожно нажать «+» сверху, чтобы начать новый сон."
+        "Прекрасно. До встречи.\n\nЕсли приснится ещё — расскажите, я рядом. Можно нажать «+» сверху, чтобы начать новый сон."
       ]
     };
   }
 
   function processAction(session, actionId) {
-    if (actionId === "feedback_yes") return offerImage(session);
+    if (actionId === "feedback_yes") return closeSession(session);
     if (actionId === "feedback_no") return askRefine(session);
-    if (actionId === "img_dream") return requestImage(session, "dream");
-    if (actionId === "img_meaning") return requestImage(session, "meaning");
-    if (actionId === "img_skip") return closeSession(session);
     return { session, replies: ["Нажмите одну из кнопок ниже — или напишите ответ."] };
   }
 
@@ -484,10 +411,6 @@
 
     if (session.phase === "refine") {
       return applyRefine(session, text);
-    }
-
-    if (session.phase === "offer_image") {
-      return handleOfferImage(session, text);
     }
 
     if (session.phase === "done") {

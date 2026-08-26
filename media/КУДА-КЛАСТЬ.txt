@@ -1,0 +1,9 @@
+Положите сюда свои медитации. Имена файлов:
+
+417-otpustit.mp3
+432-zasypanie.mp3
+396-trevoga.mp3
+174-telo.mp3
+golos-zazemlenie.mp3
+
+Подойдут также .m4a .ogg .wav — тогда поправьте расширение в data/meditations.js
