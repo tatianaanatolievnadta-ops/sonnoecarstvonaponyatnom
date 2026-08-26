@@ -23,7 +23,9 @@
       const n = new Notification(title, {
         body,
         tag: tag || "sonnoe",
-        icon: "./icons/icon-192.png",
+        icon: (document.currentScript && /\/js\//.test(document.currentScript.src))
+          ? "./icons/icon-192.png"
+          : "./icon-192.png",
         lang: "ru"
       });
       n.onclick = () => {

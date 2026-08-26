@@ -1,6 +1,8 @@
 (function () {
   "use strict";
 
+  const NESTED = !!(document.currentScript && /\/js\//.test(document.currentScript.src));
+  const imgSrc = (name) => (NESTED ? "images/" : "") + name;
   const $ = (id) => document.getElementById(id);
   const chat = $("chat");
   const input = $("input");
@@ -306,7 +308,7 @@
       <div class="card">
         <div class="card-body">
           <div class="moon-hero">
-            <img src="images/moon-card.png" alt="Луна" />
+            <img src="${imgSrc("moon-card.png")}" alt="Луна" />
             <div>
               <h3>${snap.phase.name}</h3>
               <p>${snap.phaseNote}</p>
@@ -394,7 +396,7 @@
 
     root.innerHTML = `
       <div class="card">
-        <img class="card-media" src="images/quiz-card.png" alt="" />
+        <img class="card-media" src="${imgSrc("quiz-card.png")}" alt="" />
         <div class="card-body">
           <h3>${QUIZ.title}</h3>
           <p>${QUIZ.intro}</p>
@@ -470,7 +472,7 @@
     const root = $("quiz-root");
     root.innerHTML = `
       <div class="card">
-        <img class="card-media" src="images/quiz-card.png" alt="" />
+        <img class="card-media" src="${imgSrc("quiz-card.png")}" alt="" />
         <div class="card-body">
           <p class="eyebrow">Ваш результат</p>
           <h3>${result.name}</h3>
@@ -494,7 +496,7 @@
     const root = $("articles-root");
     root.innerHTML = `
       <div class="card">
-        <img class="card-media" src="images/articles-card.png" alt="" />
+        <img class="card-media" src="${imgSrc("articles-card.png")}" alt="" />
         <div class="card-body">
           <h3>Полезное о снах</h3>
           <p>Короткие понятные тексты — без страшилок и сложной эзотерики.</p>
@@ -503,7 +505,7 @@
       ${ARTICLES.map(
         (a, i) => `
         <button type="button" class="article-item" data-aid="${a.id}">
-          <img src="images/${i % 2 === 0 ? "articles-card" : "quiz-card"}.png" alt="" />
+          <img src="${imgSrc((i % 2 === 0 ? "articles-card" : "quiz-card") + ".png")}" alt="" />
           <div>
             <h3>${a.title}</h3>
             <p>${a.teaser}</p>

@@ -1,30 +1,47 @@
-const CACHE = "sonnoe-tsarstvo-v5";
-const ASSETS = [
-  "./",
-  "./index.html",
-  "./styles.css",
-  "./manifest.json",
-  "./js/app.js",
-  "./js/engine.js",
-  "./js/storage.js",
-  "./js/moon.js",
-  "./js/notifications.js",
-  "./data/dreams.js",
-  "./data/articles.js",
-  "./data/quiz.js",
-  "./data/moon-tips.js",
-  "./icons/icon.svg",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "./images/hero-dreams.png",
-  "./images/moon-card.png",
-  "./images/quiz-card.png",
-  "./images/articles-card.png"
+const CACHE = "sonnoe-tsarstvo-v6";
+const CANDIDATES = [
+  ["./index.html", "./"],
+  ["./styles.css"],
+  ["./manifest.json"],
+  ["./js/app.js", "./app.js"],
+  ["./js/engine.js", "./engine.js"],
+  ["./js/storage.js", "./storage.js"],
+  ["./js/moon.js", "./moon.js"],
+  ["./js/notifications.js", "./notifications.js"],
+  ["./data/dreams.js", "./dreams.js"],
+  ["./data/articles.js", "./articles.js"],
+  ["./data/quiz.js", "./quiz.js"],
+  ["./data/moon-tips.js", "./moon-tips.js"],
+  ["./icons/icon.svg", "./icon.svg"],
+  ["./icons/icon-192.png", "./icon-192.png"],
+  ["./icons/icon-512.png", "./icon-512.png"],
+  ["./images/hero-dreams.png", "./hero-dreams.png"],
+  ["./images/moon-card.png", "./moon-card.png"],
+  ["./images/quiz-card.png", "./quiz-card.png"],
+  ["./images/articles-card.png", "./articles-card.png"]
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+    (async () => {
+      const cache = await caches.open(CACHE);
+      await Promise.all(
+        CANDIDATES.map(async (list) => {
+          for (const url of list) {
+            try {
+              const res = await fetch(url, { cache: "reload" });
+              if (res.ok) {
+                await cache.put(url, res);
+                return;
+              }
+            } catch (_) {
+              /* try next path */
+            }
+          }
+        })
+      );
+      await self.skipWaiting();
+    })()
   );
 });
 
