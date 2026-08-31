@@ -71,8 +71,9 @@
         lastKey = key;
         const snap = Moon.snapshot(now, state.lat, state.lon, state.directions);
         show(
-          "Луна сегодня",
-          `${snap.phase.name}, ${snap.lunarDay}-й лунный день. ${snap.tips.mood}`,
+          "Сонное царство",
+          "Доброе утро. Если что-то приснилось — запишите во вкладке «Сны», пока картинка свежая. " +
+            `${snap.phase.name}, ${snap.lunarDay}-й лунный день.`,
           "morning"
         );
       }

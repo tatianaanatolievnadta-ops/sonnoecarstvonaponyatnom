@@ -63,7 +63,8 @@
       id: Date.now().toString(36),
       date: new Date().toISOString(),
       dream: entry.dream,
-      reading: entry.reading
+      reading: entry.reading,
+      symbols: Array.isArray(entry.symbols) ? entry.symbols.slice(0, 8) : []
     });
     state.history = state.history.slice(0, 40);
     save(state);

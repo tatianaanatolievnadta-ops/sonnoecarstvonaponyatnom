@@ -2,6 +2,7 @@
   "use strict";
 
   const NESTED = !!(document.currentScript && /\/js\//.test(document.currentScript.src));
+  const APP_URL = "https://tatianaanatolievnadta-ops.github.io/sonnoecarstvonaponyatnom/";
   const imgSrc = (name) => (NESTED ? "images/" : "") + name;
   const $ = (id) => document.getElementById(id);
   const chat = $("chat");
@@ -22,7 +23,7 @@
   let pendingDream = "";
   let pendingReading = "";
 
-  let articleFilter = "all";
+  let articleFilter = "dreams";
   let currentAudio = null;
 
   function showToast(msg) {
@@ -68,16 +69,44 @@
   function addMessage(role, text, extraClass) {
     const node = el("div", `msg ${role}${extraClass ? " " + extraClass : ""}`);
     if (extraClass === "reading") {
-      node.appendChild(el("span", "label", "Расшифровка"));
-      node.appendChild(
-        document.createTextNode(text.replace(/^✦\s*Расшифровка сна\s*/u, "").trim())
-      );
+      renderReading(node, text);
     } else {
       node.textContent = text;
     }
     chat.appendChild(node);
     chat.scrollTop = chat.scrollHeight;
     return node;
+  }
+
+  function renderReading(node, raw) {
+    node.appendChild(el("span", "label", "Толкование"));
+    const text = String(raw || "").replace(/^✦\s*Расшифровка сна\s*/u, "").trim();
+    const chunks = text.split(/(?=◆ |▶ |— )/);
+    for (const chunk of chunks) {
+      const p = chunk.trim();
+      if (!p) continue;
+      if (p.startsWith("◆ ")) {
+        const nl = p.indexOf("\n");
+        const title = (nl === -1 ? p.slice(2) : p.slice(2, nl)).trim();
+        const body = (nl === -1 ? "" : p.slice(nl + 1)).trim();
+        const box = el("div", "read-card");
+        box.appendChild(el("b", "read-kicker", title));
+        if (body) box.appendChild(el("p", null, body));
+        node.appendChild(box);
+      } else if (p.startsWith("▶ ")) {
+        const nl = p.indexOf("\n");
+        const title = (nl === -1 ? p.slice(2) : p.slice(2, nl)).trim();
+        const body = (nl === -1 ? "" : p.slice(nl + 1)).trim();
+        const box = el("div", "read-sec");
+        box.appendChild(el("h4", null, title));
+        if (body) box.appendChild(el("p", null, body));
+        node.appendChild(box);
+      } else if (p.startsWith("—")) {
+        node.appendChild(el("p", "read-note", p.replace(/^—\s*/, "")));
+      } else {
+        node.appendChild(el("p", "read-lead", p));
+      }
+    }
   }
 
   function showTyping() {
@@ -93,6 +122,9 @@
   async function botSay(replies, actions) {
     document.querySelectorAll(".choice-row").forEach((n) => n.remove());
 
+    let shareDreamText = "";
+    let shareReading = "";
+
     for (const reply of replies) {
       const typing = showTyping();
       await delay(Math.min(1400, 450 + reply.length * 7));
@@ -101,16 +133,20 @@
       addMessage("bot", reply, isReading ? "reading" : "");
       if (isReading) {
         pendingReading = reply;
+        shareDreamText = pendingDream || "";
+        shareReading = reply;
+        const symbols = (session.symbols || []).map((s) => s.title);
         if (pendingDream) {
-          Store.addHistory({ dream: pendingDream, reading: reply });
-          pendingDream = "";
+          Store.addHistory({ dream: pendingDream, reading: reply, symbols });
         }
+        pendingDream = "";
       }
     }
 
     if (actions && actions.length) {
       addChoiceButtons(actions);
     }
+    if (shareReading) addShareRow(shareDreamText, shareReading);
   }
 
   function addChoiceButtons(actions) {
@@ -123,6 +159,71 @@
     });
     chat.appendChild(row);
     chat.scrollTop = chat.scrollHeight;
+  }
+
+  function readingPlain(raw) {
+    return String(raw || "")
+      .replace(/^✦\s*Расшифровка сна\s*/u, "")
+      .replace(/^[◆▶—]\s?/gm, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  function buildShareText(dream, reading) {
+    const d = String(dream || "").replace(/\s+/g, " ").trim().slice(0, 180);
+    const body = readingPlain(reading).slice(0, 850);
+    return (
+      (d ? "Сон: " + d + "\n\n" : "") +
+      body +
+      "\n\nСонное царство — толкование снов\n" +
+      APP_URL
+    );
+  }
+
+  function addShareRow(dream, reading) {
+    const row = el("div", "share-row");
+    const mk = (label, cls, fn) => {
+      const b = el("button", "btn " + cls, label);
+      b.type = "button";
+      b.addEventListener("click", fn);
+      return b;
+    };
+    row.appendChild(
+      mk("Поделиться", "btn-primary", () => shareDream(dream, reading))
+    );
+    row.appendChild(
+      mk("Telegram", "btn-ghost", () => {
+        const url =
+          "https://t.me/share/url?url=" +
+          encodeURIComponent(APP_URL) +
+          "&text=" +
+          encodeURIComponent(buildShareText(dream, reading));
+        window.open(url, "_blank", "noopener");
+      })
+    );
+    row.appendChild(
+      mk("Аудио", "btn-ghost", () => navigate("meditate"))
+    );
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  async function shareDream(dream, reading) {
+    const text = buildShareText(dream, reading);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Сонное царство", text, url: APP_URL });
+        return;
+      } catch (e) {
+        if (e && e.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast("Текст скопирован — вставьте подруге");
+    } catch (_) {
+      showToast("Скопируйте толкование вручную");
+    }
   }
 
   async function handleChoice(actionId, label) {
@@ -154,6 +255,8 @@
 
     if (session.phase === "await_dream" || session.phase === "done") {
       if (text.length >= 24) pendingDream = text;
+      const hint = $("dream-hint");
+      if (hint) hint.hidden = true;
     }
 
     const result = DreamEngine.processUserMessage(session, text);
@@ -175,9 +278,11 @@
     pendingDream = "";
     pendingReading = "";
     chat.innerHTML = "";
+    const hint = $("dream-hint");
+    if (hint) hint.hidden = false;
     const name = Store.get().name;
     const hello = name
-      ? `${name}, я рядом. Расскажите сон — текстом или голосом. Я сама уточню детали и дам расшифровку.`
+      ? `${name}, я рядом. Расскажите сон — текстом или голосом. Задам точные вопросы и разберу сюжет.`
       : DreamEngine.welcomeMessage();
     await botSay([hello]);
     input.focus();
@@ -263,6 +368,7 @@
             </div>
           </div>
           <p class="note">${snap.tips.mood} Место: ${state.locationLabel}. Время приблизительное.</p>
+          <p class="note">Это мягкий календарь, не гороскоп и не медицинский совет. Сны — во вкладке «Сны».</p>
         </div>
       </div>
 
@@ -338,27 +444,28 @@
 
     root.innerHTML = `
       <div class="card">
-        <img class="card-media" src="${imgSrc("quiz-card.png")}" alt="" />
-        <div class="card-body">
-          <h3>${QUIZ.title}</h3>
-          <p>${QUIZ.intro}</p>
-          <div class="btn-row">
-            <button type="button" class="btn btn-primary" id="quiz-start">Пройти тест</button>
-            ${
-              saved
-                ? `<button type="button" class="btn btn-ghost" id="quiz-show-last">Мой прошлый результат</button>`
-                : ""
-            }
-          </div>
-        </div>
-      </div>
-      <div class="card">
         <div class="card-body">
           <p class="eyebrow">Циклы сна</p>
           <h3>Калькулятор отхода ко сну</h3>
           <p>Подберём время, чтобы проснуться ближе к концу цикла — примерно по 90 минут. Норма зависит от возраста.</p>
           <div class="btn-row">
             <button type="button" class="btn btn-primary" id="calc-open">Рассчитать сон</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <img class="card-media" src="${imgSrc("quiz-card.png")}" alt="" />
+        <div class="card-body">
+          <p class="eyebrow">Игра</p>
+          <h3>${QUIZ.title}</h3>
+          <p>${QUIZ.intro}</p>
+          <div class="btn-row">
+            <button type="button" class="btn btn-ghost" id="quiz-start">Пройти тест</button>
+            ${
+              saved
+                ? `<button type="button" class="btn btn-ghost" id="quiz-show-last">Мой прошлый результат</button>`
+                : ""
+            }
           </div>
         </div>
       </div>`;
@@ -603,8 +710,8 @@
       <div class="card">
         <img class="card-media" src="${imgSrc("articles-card.png")}" alt="" />
         <div class="card-body">
-          <h3>Полезное о снах и сне</h3>
-          <p>Как засыпать, обустроить постель и бережно относиться к сновидениям.</p>
+          <h3>Сны и как спать</h3>
+          <p>Сначала — про сновидения. Во вкладке «Как спать» — постель и ритуалы. Ссылки на товары появятся, когда откроется партнёрка Маркета.</p>
           <div class="chip-row" id="article-filters">
             <button type="button" class="chip ${articleFilter === "all" ? "on" : ""}" data-af="all">Все</button>
             <button type="button" class="chip ${articleFilter === "sleep" ? "on" : ""}" data-af="sleep">Как спать</button>
@@ -672,58 +779,77 @@
     }
   });
 
+  function youtubeId(url) {
+    if (!url) return "";
+    const u = String(url).trim();
+    const m =
+      u.match(/youtu\.be\/([a-zA-Z0-9_-]{6,})/) ||
+      u.match(/[?&]v=([a-zA-Z0-9_-]{6,})/) ||
+      u.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{6,})/) ||
+      u.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{6,})/);
+    return m ? m[1] : "";
+  }
+
+  function medPlayerHtml(t) {
+    const id = youtubeId(t.youtube);
+    if (id) {
+      return `<div class="med-frame"><iframe
+        src="https://www.youtube-nocookie.com/embed/${id}?rel=0"
+        title="${escapeAttr(t.title)}"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+        loading="lazy"></iframe></div>`;
+    }
+    return "";
+  }
+
   /* ---------- Meditations ---------- */
   function renderMeditate() {
     const root = $("meditate-root");
     const tracks = window.MEDITATIONS || [];
+    const live = tracks.filter((t) => youtubeId(t.youtube) && !t.comingSoon);
+    const soon = tracks.filter((t) => t.comingSoon || !youtubeId(t.youtube));
     root.innerHTML = `
       <div class="card">
-        <img class="card-media" src="${imgSrc("moon-card.png")}" alt="" />
         <div class="card-body">
-          <h3>Звуки ко сну</h3>
-          <p>417, 432, 396 и 174 Гц — плюс место под ваш голос. Положите mp3 в папку <b>media</b> с именами из карточек.</p>
-          <p class="note">Громкость — едва слышно. Это фон, не концерт. Не для вождения и не вместо врача.</p>
+          <h3>Аудио ко сну</h3>
+          <p>Слушайте в кровати. Сейчас две практики — остальные появятся здесь, как только ролики будут готовы.</p>
+          <p class="note">Не для вождения и не вместо врача. Если уснёте раньше конца — так и задумано.</p>
         </div>
       </div>
-      ${tracks
+      ${live
         .map(
           (t) => `
         <article class="med-card" data-mid="${t.id}">
           <div class="med-meta">
-            <span>${t.hz ? t.hz + " Гц" : "Голос"}</span>
-            <span>${t.minutes} мин</span>
+            <span>Практика</span>
+            <span>YouTube</span>
           </div>
           <h3>${escapeHtml(t.title)}</h3>
           <p>${escapeHtml(t.teaser)}</p>
-          <audio class="med-audio" controls preload="none" src="${escapeAttr(t.file)}" data-file="${escapeAttr(t.file)}"></audio>
-          <p class="note med-missing" hidden>Файла пока нет. Добавьте <b>${escapeHtml(t.file)}</b> — и плеер заработает.</p>
+          ${medPlayerHtml(t)}
           <button type="button" class="btn btn-ghost" data-open-med="${t.id}">Как слушать</button>
         </article>`
         )
         .join("")}
+      ${
+        soon.length
+          ? `<div class="soon-list">
+        <p class="eyebrow">Скоро появятся</p>
+        ${soon
+          .map(
+            (t) => `
+          <article class="med-card med-soon">
+            <span class="soon-badge">Скоро</span>
+            <h3>${escapeHtml(t.title)}</h3>
+            <p>${escapeHtml(t.teaser || "Ролик появится в этой вкладке.")}</p>
+          </article>`
+          )
+          .join("")}
+      </div>`
+          : ""
+      }
     `;
-
-    root.querySelectorAll(".med-audio").forEach((audio) => {
-      audio.addEventListener("play", () => {
-        root.querySelectorAll(".med-audio").forEach((other) => {
-          if (other !== audio) other.pause();
-        });
-        currentAudio = audio;
-      });
-      audio.addEventListener("error", () => {
-        const card = audio.closest(".med-card");
-        const hint = card && card.querySelector(".med-missing");
-        if (audio.dataset.triedRoot) {
-          if (hint) hint.hidden = false;
-          audio.hidden = true;
-          return;
-        }
-        audio.dataset.triedRoot = "1";
-        const raw = audio.dataset.file || "";
-        audio.src = raw.replace(/^media\//, "");
-        audio.load();
-      });
-    });
 
     root.querySelectorAll("[data-open-med]").forEach((btn) => {
       btn.addEventListener("click", () => openMeditation(btn.dataset.openMed));
@@ -735,11 +861,11 @@
     if (!t) return;
     sheetBody.innerHTML = `
       <h2>${escapeHtml(t.title)}</h2>
-      <p class="note">${t.hz ? t.hz + " Гц · " : ""}${t.minutes} минут</p>
+      <p class="note">${t.hz ? t.hz + " Гц · " : ""}${t.minutes ? t.minutes + " минут" : "ролик на YouTube"}</p>
+      ${medPlayerHtml(t)}
       <div class="article-body" style="margin-top:1rem">
         ${t.body.map((p) => `<p>${escapeHtml(p)}</p>`).join("")}
       </div>
-      <p class="note">Файл: ${escapeHtml(t.file)}</p>
       <div class="btn-row">
         <button type="button" class="btn btn-primary" data-close-sheet>Понятно</button>
       </div>`;
@@ -766,23 +892,41 @@
       </div></div>
 
       <div class="card"><div class="card-body">
-        <h3>История снов</h3>
+        <h3>На экран телефона</h3>
+        <p class="note">Так приложение не потеряется в закладках. Уведомления работают после установки.</p>
+        <p class="note"><b>iPhone</b></p>
+        <ol class="install-steps">
+          <li>Откройте эту страницу в Safari</li>
+          <li>Нажмите «Поделиться» (квадрат со стрелкой)</li>
+          <li>«На экран Домой»</li>
+        </ol>
+        <p class="note"><b>Android</b></p>
+        <ol class="install-steps">
+          <li>Меню браузера (три точки)</li>
+          <li>«Установить приложение» или «Добавить на главный экран»</li>
+          <li>Подтвердите</li>
+        </ol>
+      </div></div>
+
+      <div class="card"><div class="card-body">
+        <h3>Журнал снов</h3>
         <div class="toggle-row">
           <div class="t-label">
-            <b>Сохранять расшифровки</b>
+            <b>Сохранять толкования</b>
             <span>Можно выключить — тогда записи не будут копиться</span>
           </div>
           ${switchHtml("tog-history", s.saveHistory)}
         </div>
+        <div id="freq-box"></div>
         <div id="history-box"></div>
         <div class="btn-row">
-          <button type="button" class="btn btn-ghost" id="clear-history">Очистить историю</button>
+          <button type="button" class="btn btn-ghost" id="clear-history">Очистить журнал</button>
         </div>
       </div></div>
 
       <div class="card"><div class="card-body">
-        <h3>Уведомления и вопросы</h3>
-        <p class="note">Мягкие напоминания утром про луну и вечером — вопрос перед сном. Работают, когда приложение установлено и браузер разрешил уведомления.</p>
+        <h3>Уведомления</h3>
+        <p class="note">Утром — напомнить записать сон. Вечером — тихий вопрос перед сном. Нужно установить приложение и разрешить уведомления.</p>
         <div class="toggle-row">
           <div class="t-label"><b>Включить уведомления</b><span>Разрешение системы</span></div>
           ${switchHtml("tog-notify", s.notify.enabled)}
@@ -792,7 +936,7 @@
           ${switchHtml("tog-eve", s.notify.eveningQuestion)}
         </div>
         <div class="toggle-row">
-          <div class="t-label"><b>Утренние сведения о луне</b><span>Фаза и лунный день</span></div>
+          <div class="t-label"><b>Утреннее напоминание</b><span>Записать сон и фаза луны</span></div>
           ${switchHtml("tog-morn", s.notify.morningMoon)}
         </div>
         <div class="select-row">
@@ -814,7 +958,7 @@
 
       <div class="card"><div class="card-body">
         <h3>Лунные направления</h3>
-        <p class="note">Что показывать в разделе «Луна» и учитывать в утреннем напоминании.</p>
+        <p class="note">Что показывать во вкладке «Луна». Это дополнение, не гороскоп.</p>
         ${MOON_TIPS.directions
           .map(
             (d) => `
@@ -824,14 +968,6 @@
           </div>`
           )
           .join("")}
-      </div></div>
-
-      <div class="card"><div class="card-body">
-        <h3>Установка на телефон</h3>
-        <p class="note" id="install-note">
-          iPhone: Safari → Поделиться → На экран «Домой».
-          Android: меню браузера → Установить приложение.
-        </p>
       </div></div>
     `;
 
@@ -908,12 +1044,30 @@
     const box = $("history-box");
     if (!box) return;
     const s = Store.get();
+    const freq = $("freq-box");
+    if (freq) {
+      const counts = {};
+      s.history.forEach((h) => {
+        (h.symbols || []).forEach((t) => {
+          counts[t] = (counts[t] || 0) + 1;
+        });
+      });
+      const repeats = Object.entries(counts)
+        .filter(([, n]) => n >= 2)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6);
+      freq.innerHTML = repeats.length
+        ? `<div class="freq-box"><b>Частые образы</b><div class="history-tags">${repeats
+            .map(([t, n]) => `<span>${escapeHtml(t)} · ${n}</span>`)
+            .join("")}</div></div>`
+        : "";
+    }
     if (!s.history.length) {
-      box.innerHTML = `<p class="note">Пока пусто — расскажите сон во вкладке «Сны».</p>`;
+      box.innerHTML = `<p class="note">Пока пусто — расскажите сон во вкладке «Сны». Запись появится после толкования.</p>`;
       return;
     }
     box.innerHTML = s.history
-      .slice(0, 12)
+      .slice(0, 20)
       .map((h) => {
         const d = new Date(h.date);
         const when = d.toLocaleString("ru-RU", {
@@ -922,9 +1076,45 @@
           hour: "2-digit",
           minute: "2-digit"
         });
-        return `<article class="history-item"><time>${when}</time><p>${escapeHtml(h.dream)}</p></article>`;
+        const tags = (h.symbols || [])
+          .slice(0, 4)
+          .map((t) => `<span>${escapeHtml(t)}</span>`)
+          .join("");
+        return `<button type="button" class="history-item" data-hid="${escapeAttr(h.id)}">
+          <time>${when}</time>
+          <p>${escapeHtml(h.dream)}</p>
+          ${tags ? `<div class="history-tags">${tags}</div>` : ""}
+        </button>`;
       })
       .join("");
+    box.querySelectorAll("[data-hid]").forEach((btn) => {
+      btn.addEventListener("click", () => openHistory(btn.dataset.hid));
+    });
+  }
+
+  function openHistory(id) {
+    const h = Store.get().history.find((x) => x.id === id);
+    if (!h) return;
+    const when = new Date(h.date).toLocaleString("ru-RU", {
+      day: "numeric",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+    sheetBody.innerHTML = `
+      <p class="note">${escapeHtml(when)}</p>
+      <h2>Сон</h2>
+      <p>${escapeHtml(h.dream)}</p>
+      <div class="msg bot reading" style="max-width:100%;margin-top:1rem" id="hist-reading"></div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" id="hist-share">Поделиться</button>
+        <button type="button" class="btn btn-ghost" data-close-sheet>Закрыть</button>
+      </div>`;
+    const node = $("hist-reading");
+    if (node && h.reading) renderReading(node, h.reading);
+    sheet.hidden = false;
+    const sh = $("hist-share");
+    if (sh) sh.onclick = () => shareDream(h.dream, h.reading);
   }
 
   function escapeHtml(str) {
@@ -947,10 +1137,10 @@
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
 
-  // Hide hero after first message exchange for more chat space — keep for polish
-  const hero = document.querySelector(".hero-banner");
+  // Hide short hint after the first user message — more room for the chat
+  const dreamHint = $("dream-hint");
   const obs = new MutationObserver(() => {
-    if (chat.children.length > 2 && hero) hero.style.display = "none";
+    if (dreamHint && chat.querySelector(".msg.user")) dreamHint.hidden = true;
   });
   obs.observe(chat, { childList: true });
 })();
