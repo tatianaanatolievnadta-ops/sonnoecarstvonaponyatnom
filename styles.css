@@ -308,6 +308,15 @@ body {
 .quiz-q {
   font-family: var(--font-d); font-size: 1.4rem; margin: 0 0 .75rem; font-weight: 600;
 }
+.quiz-last {
+  margin: .55rem 0 0; color: var(--accent); font-size: .78rem; line-height: 1.35;
+}
+.quiz-extra {
+  margin: .85rem 0 0; padding: .7rem .8rem;
+  border: 1px dashed rgba(212,176,122,.35); border-radius: .85rem;
+}
+.quiz-extra b { display: block; font-size: .8rem; color: var(--accent); margin-bottom: .3rem; }
+.quiz-extra p { margin: 0; }
 
 .article-item {
   display: grid; grid-template-columns: 4.8rem 1fr; gap: .8rem; align-items: center;
