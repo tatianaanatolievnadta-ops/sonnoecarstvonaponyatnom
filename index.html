@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#121a2e" />
-  <meta name="description" content="Сонное царство — расшифровка снов, лунный календарь, тесты и советы" />
+  <meta name="description" content="Сонное царство — расскажите сон, получите толкование, послушайте практику ко сну" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Сонное царство" />
@@ -35,20 +35,14 @@
       <header class="page-head">
         <div>
           <p class="eyebrow">Сонное царство</p>
-          <h1 class="page-title">Ваш сон</h1>
+          <h1 class="page-title">Расскажите сон</h1>
         </div>
         <button type="button" class="icon-btn" id="btn-new-dream" aria-label="Новый сон" title="Новый сон">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
         </button>
       </header>
 
-      <div class="hero-banner">
-        <img src="images/hero-dreams.png" alt="" class="hero-img" onerror="this.onerror=null;this.src='hero-dreams.png'" />
-        <div class="hero-copy">
-          <h2>Расскажите, что приснилось</h2>
-          <p>Напишите или наговорите — я задам точные вопросы и разберу сон по образам</p>
-        </div>
-      </div>
+      <p class="dream-hint" id="dream-hint">Напишите или наговорите — без вариантов «а / б / в». Два-три вопроса, затем толкование.</p>
 
       <div class="chat" id="chat" role="log" aria-live="polite"></div>
 
@@ -83,8 +77,8 @@
     <section class="view" id="view-quiz" data-view="quiz">
       <header class="page-head">
         <div>
-          <p class="eyebrow">Игра и расчёт</p>
-          <h1 class="page-title">Тест и сон</h1>
+          <p class="eyebrow">Ритм и игра</p>
+          <h1 class="page-title">Когда спать</h1>
         </div>
       </header>
       <div class="scroll-pad" id="quiz-root"></div>

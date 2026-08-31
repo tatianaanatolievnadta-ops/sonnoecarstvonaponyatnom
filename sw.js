@@ -1,4 +1,4 @@
-const CACHE = "sonnoe-tsarstvo-v9";
+const CACHE = "sonnoe-tsarstvo-v10";
 const CANDIDATES = [
   ["./index.html", "./"],
   ["./styles.css"],
