@@ -20,6 +20,7 @@
   let recognition = null;
   let quizIndex = 0;
   let quizScores = {};
+  let activeQuiz = null;
   let pendingDream = "";
   let pendingReading = "";
 
@@ -436,11 +437,43 @@
   }
 
   /* ---------- Quiz ---------- */
+  function quizList() {
+    return window.QUIZZES || (window.QUIZ ? [window.QUIZ] : []);
+  }
+
   function renderQuiz() {
     const root = $("quiz-root");
-    const saved = Store.get().quizResult;
+    const savedMap = Store.get().quizResults || {};
     quizIndex = 0;
     quizScores = {};
+    activeQuiz = null;
+
+    const cards = quizList()
+      .map((q) => {
+        const last = savedMap[q.id];
+        return `
+        <div class="card">
+          <div class="card-body">
+            <p class="eyebrow">${escapeHtml(q.eyebrow || (q.play ? "Игра" : "Опрос"))}</p>
+            <h3>${escapeHtml(q.title)}</h3>
+            <p>${escapeHtml(q.teaser)}</p>
+            ${
+              last
+                ? `<p class="quiz-last">Последний раз: ${escapeHtml(last.name)}</p>`
+                : `<p class="note">${q.minutes ? q.minutes + " мин" : "пара минут"} · без правильных ответов</p>`
+            }
+            <div class="btn-row">
+              <button type="button" class="btn ${q.play ? "btn-ghost" : "btn-primary"}" data-quiz="${q.id}">Пройти</button>
+              ${
+                last
+                  ? `<button type="button" class="btn btn-ghost" data-quiz-last="${q.id}">Мой результат</button>`
+                  : ""
+              }
+            </div>
+          </div>
+        </div>`;
+      })
+      .join("");
 
     root.innerHTML = `
       <div class="card">
@@ -453,59 +486,72 @@
           </div>
         </div>
       </div>
-      <div class="card">
-        <img class="card-media" src="${imgSrc("quiz-card.png")}" alt="" />
-        <div class="card-body">
-          <p class="eyebrow">Игра</p>
-          <h3>${QUIZ.title}</h3>
-          <p>${QUIZ.intro}</p>
-          <div class="btn-row">
-            <button type="button" class="btn btn-ghost" id="quiz-start">Пройти тест</button>
-            ${
-              saved
-                ? `<button type="button" class="btn btn-ghost" id="quiz-show-last">Мой прошлый результат</button>`
-                : ""
-            }
-          </div>
-        </div>
-      </div>`;
-    $("quiz-start").onclick = () => {
-      quizIndex = 0;
-      quizScores = {};
-      paintQuestion();
-    };
-    const last = $("quiz-show-last");
-    if (last) last.onclick = () => showQuizResult(saved);
+      <p class="note" style="margin: .2rem 0 .7rem">Опросы ниже не ставят диагноз. После ответа — что сделать сегодня вечером.</p>
+      ${cards}`;
+
     $("calc-open").onclick = () => paintSleepCalc();
+    root.querySelectorAll("[data-quiz]").forEach((btn) => {
+      btn.addEventListener("click", () => startQuizById(btn.dataset.quiz));
+    });
+    root.querySelectorAll("[data-quiz-last]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const rec = (Store.get().quizResults || {})[btn.dataset.quizLast];
+        const quiz = quizList().find((q) => q.id === btn.dataset.quizLast);
+        if (rec && quiz) {
+          activeQuiz = quiz;
+          showQuizResult(rec);
+        }
+      });
+    });
+  }
+
+  function startQuizById(id) {
+    const quiz = quizList().find((q) => q.id === id);
+    if (!quiz) return;
+    activeQuiz = quiz;
+    quizIndex = 0;
+    quizScores = {};
+    paintQuestion();
   }
 
   function paintQuestion() {
     const root = $("quiz-root");
-    if (quizIndex >= QUIZ.questions.length) {
+    const quiz = activeQuiz;
+    if (!quiz) {
+      renderQuiz();
+      return;
+    }
+    if (quizIndex >= quiz.questions.length) {
       finishQuiz();
       return;
     }
-    const q = QUIZ.questions[quizIndex];
-    const pct = Math.round((quizIndex / QUIZ.questions.length) * 100);
+    const q = quiz.questions[quizIndex];
+    const pct = Math.round((quizIndex / quiz.questions.length) * 100);
     root.innerHTML = `
       <div class="card"><div class="card-body">
-        <p class="note">Вопрос ${quizIndex + 1} из ${QUIZ.questions.length}</p>
+        <p class="eyebrow">${escapeHtml(quiz.title)}</p>
+        <p class="note">Вопрос ${quizIndex + 1} из ${quiz.questions.length}</p>
         <div class="progress"><i style="width:${pct}%"></i></div>
-        <p class="quiz-q">${q.text}</p>
+        <p class="quiz-q">${escapeHtml(q.text)}</p>
         <div id="quiz-opts">
           ${q.options
             .map(
               (o) =>
-                `<button type="button" class="option" data-oid="${o.id}">${o.label}</button>`
+                `<button type="button" class="option" data-oid="${escapeAttr(o.id)}">${escapeHtml(o.label)}</button>`
             )
             .join("")}
         </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-ghost" id="quiz-abort">К списку</button>
+        </div>
       </div></div>`;
 
+    $("quiz-abort").onclick = () => renderQuiz();
     root.querySelectorAll(".option").forEach((btn) => {
       btn.addEventListener("click", () => {
         const opt = q.options.find((o) => o.id === btn.dataset.oid);
-        Object.entries(opt.scores).forEach(([k, v]) => {
+        if (!opt) return;
+        Object.entries(opt.scores || {}).forEach(([k, v]) => {
           quizScores[k] = (quizScores[k] || 0) + v;
         });
         quizIndex += 1;
@@ -515,40 +561,94 @@
   }
 
   function finishQuiz() {
-    let best = "soft";
-    let max = -1;
-    Object.entries(quizScores).forEach(([k, v]) => {
-      if (v > max) {
-        max = v;
-        best = k;
+    const quiz = activeQuiz;
+    if (!quiz) {
+      renderQuiz();
+      return;
+    }
+    const ranked = Object.entries(quizScores).sort((a, b) => b[1] - a[1]);
+    const best =
+      ranked.length && ranked[0][1] > 0
+        ? ranked[0][0]
+        : quiz.fallback || (ranked[0] && ranked[0][0]) || "soft";
+    const pack = (quiz.results && quiz.results[best]) || quiz.results[quiz.fallback] || {};
+    let extra = "";
+    let extraTip = "";
+    if (ranked[1] && ranked[1][1] > 0 && ranked[1][0] !== best) {
+      const close = ranked[0][1] - ranked[1][1] <= 2;
+      const secondPack = quiz.results[ranked[1][0]];
+      if (close && secondPack && !quiz.play) {
+        extra = secondPack.name;
+        extraTip = secondPack.tip;
       }
-    });
-    const result = Object.assign({ id: best }, QUIZ.results[best] || QUIZ.results.soft);
-    Store.update({ quizResult: result });
+    }
+    const result = {
+      quizId: quiz.id,
+      id: best,
+      name: pack.name || "Результат",
+      blurb: pack.blurb || "",
+      tip: pack.tip || "",
+      extra,
+      extraTip,
+      actions: pack.actions || []
+    };
+    const map = Object.assign({}, Store.get().quizResults || {});
+    map[quiz.id] = result;
+    Store.update({ quizResults: map, quizResult: result });
     showQuizResult(result);
   }
 
   function showQuizResult(result) {
     const root = $("quiz-root");
+    const actions = result.actions || [];
     root.innerHTML = `
       <div class="card">
-        <img class="card-media" src="${imgSrc("quiz-card.png")}" alt="" />
         <div class="card-body">
           <p class="eyebrow">Ваш результат</p>
-          <h3>${result.name}</h3>
-          <p>${result.blurb}</p>
+          <h3>${escapeHtml(result.name)}</h3>
+          <p>${escapeHtml(result.blurb)}</p>
           <div class="tip-item" style="margin-top:1rem">
-            <div class="tip-top"><span class="tip-ico">✦</span><strong>Совет</strong></div>
-            <p>${result.tip}</p>
+            <div class="tip-top"><span class="tip-ico">✦</span><strong>Что сделать</strong></div>
+            <p>${escapeHtml(result.tip)}</p>
           </div>
+          ${
+            result.extra
+              ? `<div class="quiz-extra"><b>Ещё замечено</b><p>${escapeHtml(result.extra)}${
+                  result.extraTip ? " — " + escapeHtml(result.extraTip) : ""
+                }</p></div>`
+              : ""
+          }
           <div class="btn-row">
-            <button type="button" class="btn btn-primary" id="quiz-again">К тестам</button>
-            <button type="button" class="btn btn-ghost" id="quiz-to-dreams">Рассказать сон</button>
+            ${actions
+              .map(
+                (a, i) =>
+                  `<button type="button" class="btn ${i === 0 ? "btn-primary" : "btn-ghost"}" data-qact="${i}">${escapeHtml(
+                    a.label
+                  )}</button>`
+              )
+              .join("")}
+            <button type="button" class="btn btn-ghost" id="quiz-again">К тестам</button>
           </div>
         </div>
       </div>`;
     $("quiz-again").onclick = () => renderQuiz();
-    $("quiz-to-dreams").onclick = () => navigate("dreams");
+    root.querySelectorAll("[data-qact]").forEach((btn) => {
+      btn.addEventListener("click", () => runQuizAction(actions[Number(btn.dataset.qact)]));
+    });
+  }
+
+  function runQuizAction(act) {
+    if (!act) return;
+    if (act.calc) {
+      paintSleepCalc();
+      return;
+    }
+    if (act.article) {
+      navigate("articles");
+      openArticle(act.article);
+      return;
+    }
+    if (act.nav) navigate(act.nav);
   }
 
   let calcMode = "wake";

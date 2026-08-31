@@ -16,6 +16,7 @@
       morningHour: 8
     },
     quizResult: null,
+    quizResults: {},
     lat: 55.7558,
     lon: 37.6173,
     locationLabel: "Москва (по умолчанию)"
@@ -33,6 +34,7 @@
       return Object.assign(clone(defaults), parsed, {
         directions: Object.assign({}, defaults.directions, parsed.directions || {}),
         notify: Object.assign({}, defaults.notify, parsed.notify || {}),
+        quizResults: Object.assign({}, defaults.quizResults, parsed.quizResults || {}),
         history: Array.isArray(parsed.history) ? parsed.history : []
       });
     } catch (_) {
@@ -52,6 +54,7 @@
     const state = Object.assign(load(), patch);
     if (patch.directions) state.directions = Object.assign(load().directions, patch.directions);
     if (patch.notify) state.notify = Object.assign(load().notify, patch.notify);
+    if (patch.quizResults) state.quizResults = Object.assign(load().quizResults || {}, patch.quizResults);
     save(state);
     return state;
   }
