@@ -48,7 +48,7 @@ function logResult(label, result) {
   return result;
 }
 
-// --- Path A: dream → clarify×3 → feedback → yes → image ---
+// --- Path A: dream → clarify×3 → feedback → yes → done ---
 let session = DreamEngine.createSession();
 assert(session.phase === "await_dream", "start phase await_dream");
 
@@ -88,17 +88,12 @@ assert(
 
 r = logResult("feedback_yes", DreamEngine.processAction(session, "feedback_yes"));
 session = r.session;
-assert(session.phase === "offer_image", 'feedback_yes → phase "offer_image"');
+assert(session.phase === "done", 'feedback_yes → phase "done"');
+assert(!r.image, "no image after yes");
 assert(
-  (r.actions || []).some((a) => a.id === "img_dream"),
-  "img_dream action present"
+  /прекрасно|до встречи/i.test((r.replies || []).join(" ")),
+  "yes reply is farewell"
 );
-
-r = logResult("img_dream", DreamEngine.processAction(session, "img_dream"));
-session = r.session;
-assert(session.phase === "done", 'img_dream → phase "done"');
-assert(!!r.image && typeof r.image === "object", "result has image object");
-assert(r.image.kind === "dream", 'image.kind === "dream"');
 
 // --- Path B: feedback_no → refine → addition → feedback ---
 session = DreamEngine.createSession();

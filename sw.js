@@ -1,4 +1,4 @@
-const CACHE = "sonnoe-tsarstvo-v6";
+const CACHE = "sonnoe-tsarstvo-v9";
 const CANDIDATES = [
   ["./index.html", "./"],
   ["./styles.css"],
@@ -10,7 +10,10 @@ const CANDIDATES = [
   ["./js/notifications.js", "./notifications.js"],
   ["./data/dreams.js", "./dreams.js"],
   ["./data/articles.js", "./articles.js"],
+  ["./data/affiliates.js", "./affiliates.js"],
+  ["./data/meditations.js", "./meditations.js"],
   ["./data/quiz.js", "./quiz.js"],
+  ["./data/sleep-calc.js", "./sleep-calc.js"],
   ["./data/moon-tips.js", "./moon-tips.js"],
   ["./icons/icon.svg", "./icon.svg"],
   ["./icons/icon-192.png", "./icon-192.png"],
