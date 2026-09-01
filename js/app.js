@@ -811,7 +811,7 @@
         <img class="card-media" src="${imgSrc("articles-card.png")}" alt="" />
         <div class="card-body">
           <h3>Сны и как спать</h3>
-          <p>Сначала — про сновидения. Во вкладке «Как спать» — постель и ритуалы. Ссылки на товары появятся, когда откроется партнёрка Маркета.</p>
+          <p>Сначала — про сновидения. Во вкладке «Как спать» — постель и ритуалы. Внизу части статей — подсказки для спальни и, когда ссылки готовы, переход на Маркет.</p>
           <div class="chip-row" id="article-filters">
             <button type="button" class="chip ${articleFilter === "all" ? "on" : ""}" data-af="all">Все</button>
             <button type="button" class="chip ${articleFilter === "sleep" ? "on" : ""}" data-af="sleep">Как спать</button>
