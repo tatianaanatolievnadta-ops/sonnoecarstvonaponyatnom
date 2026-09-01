@@ -24,7 +24,7 @@
   let pendingDream = "";
   let pendingReading = "";
 
-  let articleFilter = "dreams";
+  let articleFilter = "sleep";
   let currentAudio = null;
 
   function showToast(msg) {
@@ -776,30 +776,44 @@
     return box.items && box.items[key] ? box.items[key] : null;
   }
 
-  function picksHtml(keys) {
+  function pickCardHtml(item, aff) {
+    const canBuy = aff.enabled && item.url;
+    return `
+      <article class="pick-card">
+        <b>${escapeHtml(item.label)}</b>
+        <p>${escapeHtml(item.hint)}</p>
+        ${
+          canBuy
+            ? `<a class="btn btn-primary pick-link" href="${escapeAttr(item.url)}" target="_blank" rel="noopener noreferrer sponsored">Смотреть на Маркете</a>`
+            : ""
+        }
+      </article>`;
+  }
+
+  function picksHtml(keys, heading) {
     const list = (keys || []).map(pickItem).filter(Boolean);
     if (!list.length) return "";
     const aff = window.AFFILIATES || {};
-    const cards = list
-      .map((item) => {
-        const canBuy = aff.enabled && item.url;
-        return `
-        <article class="pick-card">
-          <b>${escapeHtml(item.label)}</b>
-          <p>${escapeHtml(item.hint)}</p>
-          ${
-            canBuy
-              ? `<a class="btn btn-primary pick-link" href="${escapeAttr(item.url)}" target="_blank" rel="noopener noreferrer sponsored">Смотреть вариант</a>`
-              : ""
-          }
-        </article>`;
-      })
-      .join("");
+    const cards = list.map((item) => pickCardHtml(item, aff)).join("");
     const disc =
       aff.enabled && list.some((i) => i.url)
         ? `<p class="note pick-disc">${escapeHtml(aff.disclosure || "")}</p>`
         : "";
-    return `<div class="picks"><p class="eyebrow">Для спальни</p>${cards}${disc}</div>`;
+    return `<div class="picks"><p class="eyebrow">${escapeHtml(heading || "Можно подобрать")}</p>${cards}${disc}</div>`;
+  }
+
+  function shopHtml() {
+    const aff = window.AFFILIATES || {};
+    const items = Object.values(aff.items || {}).filter((i) => i && i.url);
+    if (!aff.enabled || !items.length) return "";
+    const cards = items.map((item) => pickCardHtml(item, aff)).join("");
+    return `
+      <div class="picks shop-block">
+        <p class="eyebrow">Магазин сна</p>
+        <p class="shop-lead">Кнопки ведут на Яндекс Маркет. Внутри статьи — тот же подбор, по теме.</p>
+        ${cards}
+        <p class="note pick-disc">${escapeHtml(aff.disclosure || "")}</p>
+      </div>`;
   }
 
   /* ---------- Articles ---------- */
@@ -811,7 +825,7 @@
         <img class="card-media" src="${imgSrc("articles-card.png")}" alt="" />
         <div class="card-body">
           <h3>Сны и как спать</h3>
-          <p>Сначала — про сновидения. Во вкладке «Как спать» — постель и ритуалы. Внизу части статей — подсказки для спальни и, когда ссылки готовы, переход на Маркет.</p>
+          <p>Откройте статью: внутри совет и кнопки «Смотреть на Маркете». Ниже — все подборки сразу, без поиска по тексту.</p>
           <div class="chip-row" id="article-filters">
             <button type="button" class="chip ${articleFilter === "all" ? "on" : ""}" data-af="all">Все</button>
             <button type="button" class="chip ${articleFilter === "sleep" ? "on" : ""}" data-af="sleep">Как спать</button>
@@ -819,6 +833,7 @@
           </div>
         </div>
       </div>
+      ${shopHtml()}
       ${filtered
         .map(
           (a, i) => `
@@ -847,13 +862,22 @@
   function openArticle(id) {
     const a = ARTICLES.find((x) => x.id === id);
     if (!a) return;
+    const splitAt = Math.min(a.picksAfter || 2, (a.body || []).length);
+    const head = (a.body || []).slice(0, splitAt);
+    const rest = (a.body || []).slice(splitAt);
+    const offer = picksHtml(a.picks, "Подобрать на Маркете");
     sheetBody.innerHTML = `
       <h2>${a.title}</h2>
       <p class="note">${a.minutes} минут · Сонное царство</p>
       <div class="article-body" style="margin-top:1rem">
-        ${a.body.map((p) => `<p>${p}</p>`).join("")}
+        ${head.map((p) => `<p>${p}</p>`).join("")}
       </div>
-      ${picksHtml(a.picks)}
+      ${offer}
+      ${
+        rest.length
+          ? `<div class="article-body">${rest.map((p) => `<p>${p}</p>`).join("")}</div>`
+          : ""
+      }
       <div class="btn-row">
         ${
           a.id === "sleep-by-age"

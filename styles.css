@@ -449,6 +449,8 @@ body {
 }
 
 .picks { margin: 1.1rem 0 .4rem; }
+.shop-block { margin: 0 0 1.1rem; }
+.shop-lead { margin: .35rem 0 .15rem; color: var(--muted); font-size: .82rem; line-height: 1.45; }
 .pick-card {
   border: 1px solid var(--line); border-radius: 1rem;
   padding: .85rem .95rem; margin-top: .55rem;
