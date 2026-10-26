@@ -1114,9 +1114,9 @@
       btn.addEventListener("click", () => navigate(btn.dataset.go));
     });
     root.querySelectorAll("[data-shelf]").forEach((btn) => {
-      btn.addEventListener("click", () =>
-        showToast("Разбор скоро — сначала соберём тексты и оплату")
-      );
+      btn.addEventListener("click", () => {
+        location.href = "pay.html?item=" + encodeURIComponent(btn.dataset.shelf || "sub");
+      });
     });
     const hide = $("install-hide");
     if (hide) {
@@ -1182,7 +1182,7 @@
         <h3>Число проблемы · ${snap.problem} · ${escapeHtml(snap.planetProblem.name)}</h3>
         <p>${escapeHtml(snap.problemTeaser)}</p>
         <p class="note">Полный текст и практика — в платном разборе. Экспрессия: ${snap.expression}.</p>
-        <button type="button" class="btn btn-ghost" id="btn-problem-soon">Напомнить, когда откроется</button>
+        <a class="btn btn-primary" href="pay.html?item=problem" style="display:inline-flex;text-decoration:none;margin-top:.35rem">Перейти к оформлению · 490 ₽</a>
       </div></div>
       <div class="card"><div class="card-body">
         <h3>Дата в расчёте</h3>
@@ -1194,8 +1194,6 @@
     root.querySelectorAll("[data-go]").forEach((b) =>
       b.addEventListener("click", () => navigate(b.dataset.go))
     );
-    const soon = $("btn-problem-soon");
-    if (soon) soon.onclick = () => showToast("Запомнила — откроем вместе с оплатой");
   }
 
   function periodCard(label, n, planet, info) {

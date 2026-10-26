@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#121a2e" />
+  <title>Оплата — Сонное царство</title>
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="css/legal.css" />
+  <style>
+    .pay-box {
+      margin-top: .5rem; padding: 1.15rem 1.1rem;
+      border: 1px solid rgba(212,176,122,.35); border-radius: var(--radius);
+      background:
+        radial-gradient(ellipse 80% 60% at 90% 0%, rgba(212,176,122,.16), transparent 55%),
+        var(--bg-elev);
+    }
+    .pay-box .sum {
+      font-family: var(--font-d); font-size: 2rem; font-weight: 600;
+      color: var(--accent); margin: .35rem 0 .6rem;
+    }
+    .pay-box h2 { margin: 0; font-family: var(--font-d); font-size: 1.45rem; }
+    .pay-warn {
+      margin: 1rem 0 0; padding: .85rem .9rem;
+      border-radius: .9rem; border: 1px solid rgba(224,154,154,.4);
+      background: rgba(180,70,70,.12); color: #f0d0d0; font-size: .9rem; line-height: 1.45;
+    }
+    .pay-actions { display: grid; gap: .55rem; margin-top: 1.1rem; }
+    .pay-actions .btn { width: 100%; text-align: center; text-decoration: none; }
+    .btn[disabled], .btn.is-disabled {
+      opacity: .45; pointer-events: none; cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="sky" aria-hidden="true"><div class="glow glow-a"></div><div class="glow glow-b"></div><div class="stars"></div></div>
+  <main class="legal">
+    <a class="back" href="./index.html">← На главную</a>
+    <h1>Оформление</h1>
+    <p class="lead">Выбор услуги. Оплата картой и СБП появится после подключения ЮKassa.</p>
+
+    <div class="pay-box" id="pay-box">
+      <p class="num-kicker" style="margin:0;color:var(--accent);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase">Услуга</p>
+      <h2 id="pay-title">…</h2>
+      <div class="sum" id="pay-price">…</div>
+      <p id="pay-meta" style="margin:0;color:var(--muted);font-size:.88rem"></p>
+      <div class="pay-warn" role="status">
+        Сейчас оплатить нельзя: платёж ещё подключается. Цены уже зафиксированы на сайте —
+        когда ЮKassa одобрит магазин, кнопка оплаты заработает здесь же.
+      </div>
+      <div class="pay-actions">
+        <button type="button" class="btn btn-primary is-disabled" disabled aria-disabled="true">Оплатить — скоро</button>
+        <a class="btn btn-ghost" href="prices.html">Все цены</a>
+        <a class="btn btn-ghost" href="offer.html">Оферта</a>
+        <a class="btn btn-ghost" href="mailto:tatiana.anatolievna.dta@gmail.com?subject=Сонное%20царство%20—%20хочу%20оплатить">Написать на почту</a>
+      </div>
+    </div>
+
+    <p class="hint">
+      Исполнитель: Желиховская Т. А., ИНН 615419935406, г. Таганрог.
+      <a href="requisites.html" style="color:var(--accent)">Реквизиты</a>
+    </p>
+  </main>
+  <script>
+    (function () {
+      var CATALOG = {
+        sub: {
+          title: "Подписка «Сон и числа»",
+          price: "390 ₽",
+          meta: "30 дней: сны без лимита, энергия дня / месяца / года"
+        },
+        problem: {
+          title: "Число проблемы",
+          price: "490 ₽",
+          meta: "Полный разбор — где застреваете и что прорабатывать"
+        },
+        year: {
+          title: "Личный год",
+          price: "990 ₽",
+          meta: "12 месяцев по твоей дате рождения"
+        },
+        compat: {
+          title: "Совместимость",
+          price: "490 ₽",
+          meta: "Два числа — картина отношений"
+        },
+        "dream-deep": {
+          title: "Глубокий разбор сна",
+          price: "490 ₽",
+          meta: "Сон + твои числа в одном тексте"
+        }
+      };
+      var id = new URLSearchParams(location.search).get("item") || "sub";
+      var item = CATALOG[id] || CATALOG.sub;
+      document.getElementById("pay-title").textContent = item.title;
+      document.getElementById("pay-price").textContent = item.price;
+      document.getElementById("pay-meta").textContent = item.meta;
+      document.title = item.title + " — Сонное царство";
+    })();
+  </script>
+</body>
+</html>

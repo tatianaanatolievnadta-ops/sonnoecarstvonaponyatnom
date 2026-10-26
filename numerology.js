@@ -149,6 +149,13 @@ window.NUMEROLOGY = {
 
   shelf: [
     {
+      id: "sub",
+      title: "Подписка «Сон и числа»",
+      price: "390 ₽",
+      meta: "30 дней · сны и энергия периодов",
+      locked: true
+    },
+    {
       id: "problem",
       title: "Число проблемы",
       price: "490 ₽",
