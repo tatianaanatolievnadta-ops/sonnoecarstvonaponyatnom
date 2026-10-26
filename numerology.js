@@ -151,28 +151,28 @@ window.NUMEROLOGY = {
     {
       id: "problem",
       title: "Число проблемы",
-      price: "скоро",
+      price: "490 ₽",
       meta: "где застреваете и что прорабатывать",
       locked: true
     },
     {
       id: "year",
       title: "Твой личный год",
-      price: "скоро",
+      price: "990 ₽",
       meta: "12 месяцев по твоей дате",
       locked: true
     },
     {
       id: "compat",
       title: "Совместимость",
-      price: "скоро",
+      price: "490 ₽",
       meta: "два числа — одна картина",
       locked: true
     },
     {
       id: "dream-deep",
       title: "Глубокий разбор сна",
-      price: "скоро",
+      price: "490 ₽",
       meta: "сон + твои числа в одном тексте",
       locked: true
     }

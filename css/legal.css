@@ -1,0 +1,46 @@
+.legal {
+  min-height: 100dvh;
+  padding: calc(var(--safe-t) + 1rem) 1.15rem calc(var(--safe-b) + 2rem);
+  max-width: 28rem; margin: 0 auto;
+}
+.legal a.back { color: var(--accent); text-decoration: none; font-size: .85rem; }
+.legal h1 {
+  font-family: var(--font-d); font-size: 1.9rem; margin: .7rem 0 .35rem;
+}
+.legal h2 {
+  font-family: var(--font-d); font-size: 1.25rem; margin: 1.35rem 0 .45rem;
+}
+.legal .lead { color: var(--muted); font-size: .9rem; line-height: 1.45; margin: 0 0 1rem; }
+.legal p, .legal li { color: #d5deef; font-size: .9rem; line-height: 1.5; }
+.legal ul { padding-left: 1.1rem; }
+.legal dl { margin: 0; }
+.legal dt {
+  margin: .85rem 0 .2rem; color: var(--accent); font-size: .72rem;
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.legal dd {
+  margin: 0; color: var(--text); font-size: .95rem; line-height: 1.45;
+  padding: .65rem .8rem; border: 1px solid var(--line); border-radius: .85rem;
+  background: var(--bg-elev);
+}
+.legal .hint { margin-top: 1.2rem; color: var(--muted); font-size: .78rem; line-height: 1.4; }
+.legal .nav-docs {
+  display: flex; flex-wrap: wrap; gap: .45rem; margin: 0 0 1rem;
+}
+.legal .nav-docs a {
+  color: var(--accent); text-decoration: none; font-size: .78rem;
+  border: 1px solid rgba(212,176,122,.35); border-radius: 999px;
+  padding: .35rem .75rem; background: var(--accent-soft);
+}
+.price-card {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--bg-elev); padding: 1rem 1.05rem; margin-bottom: .7rem;
+}
+.price-card h3 {
+  margin: 0; font-family: var(--font-d); font-size: 1.25rem;
+}
+.price-card .sum {
+  margin: .35rem 0 0; color: var(--accent); font-weight: 600; font-size: 1.05rem;
+}
+.price-card p { margin: .4rem 0 0; color: var(--muted); font-size: .85rem; }
+.price-card .was { text-decoration: line-through; opacity: .7; font-weight: 500; margin-right: .35rem; }
