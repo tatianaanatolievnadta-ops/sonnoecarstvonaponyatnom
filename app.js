@@ -1329,6 +1329,12 @@
       </div></div>
 
       <div class="card"><div class="card-body">
+        <h3>Документы</h3>
+        <p class="note">Реквизиты исполнителя — для оплаты и ЮKassa.</p>
+        <a class="btn btn-ghost" href="requisites.html" style="display:inline-flex;text-decoration:none;margin-top:.5rem">Реквизиты</a>
+      </div></div>
+
+      <div class="card"><div class="card-body">
         <h3>На экран телефона</h3>
         <p class="note">Так приложение не потеряется в закладках. Уведомления работают после установки.</p>
         <p class="note"><b>iPhone</b></p>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#121a2e" />
+  <title>Реквизиты — Сонное царство</title>
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .legal {
+      min-height: 100dvh;
+      padding: calc(var(--safe-t) + 1rem) 1.15rem calc(var(--safe-b) + 2rem);
+      max-width: 28rem; margin: 0 auto;
+    }
+    .legal a.back {
+      color: var(--accent); text-decoration: none; font-size: .85rem;
+    }
+    .legal h1 {
+      font-family: var(--font-d); font-size: 1.9rem; margin: .7rem 0 .35rem;
+    }
+    .legal .lead { color: var(--muted); font-size: .9rem; line-height: 1.45; margin: 0 0 1rem; }
+    .legal dl { margin: 0; }
+    .legal dt {
+      margin: .85rem 0 .2rem; color: var(--accent); font-size: .72rem;
+      letter-spacing: .1em; text-transform: uppercase;
+    }
+    .legal dd {
+      margin: 0; color: var(--text); font-size: .95rem; line-height: 1.45;
+      padding: .65rem .8rem; border: 1px solid var(--line); border-radius: .85rem;
+      background: var(--bg-elev);
+    }
+    .legal dd.todo { border-color: rgba(224,154,154,.45); color: #f0c4c4; }
+    .legal .hint { margin-top: 1.2rem; color: var(--muted); font-size: .78rem; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <div class="sky" aria-hidden="true">
+    <div class="glow glow-a"></div>
+    <div class="glow glow-b"></div>
+    <div class="stars"></div>
+  </div>
+  <main class="legal">
+    <a class="back" href="./index.html">← Сонное царство</a>
+    <h1>Реквизиты</h1>
+    <p class="lead">Исполнитель услуг приложения «Сонное царство». Заполните поля ниже своими данными — для ЮKassa и чеков.</p>
+
+    <dl>
+      <dt>Статус</dt>
+      <dd>Физическое лицо — плательщик налога на профессиональный доход (самозанятая)</dd>
+
+      <dt>ФИО</dt>
+      <dd>Желиховская Татьяна Анатольевна</dd>
+
+      <dt>ИНН</dt>
+      <dd>615419935406</dd>
+
+      <dt>Регион / город</dt>
+      <dd class="todo">Укажите город (как в «Мой налог»)</dd>
+
+      <dt>Электронная почта</dt>
+      <dd>tatiana.anatolievna.dta@gmail.com</dd>
+
+      <dt>Сайт приложения</dt>
+      <dd><a href="https://tatianaanatolievnadta-ops.github.io/sonnoecarstvonaponyatnom/" style="color:var(--accent)">tatianaanatolievnadta-ops.github.io/sonnoecarstvonaponyatnom</a></dd>
+
+      <dt>Вид деятельности</dt>
+      <dd>Информационно-развлекательные услуги: расшифровка снов, нумерологические материалы, аудиопрактики ко сну</dd>
+
+      <dt>НДС</dt>
+      <dd>Не облагается (режим НПД)</dd>
+    </dl>
+
+    <p class="hint">
+      Розовые поля — проверьте и поправьте. ИНН и регион возьмите из приложения «Мой налог».
+      Оферту и согласие на персональные данные добавим отдельными страницами перед приёмом оплаты.
+    </p>
+  </main>
+</body>
+</html>
