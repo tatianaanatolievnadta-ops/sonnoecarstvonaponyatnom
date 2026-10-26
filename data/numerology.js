@@ -150,9 +150,9 @@ window.NUMEROLOGY = {
   shelf: [
     {
       id: "sub",
-      title: "Подписка «Сон и числа»",
+      title: "Подписка «Мои числа»",
       price: "390 ₽",
-      meta: "30 дней · сны и энергия периодов",
+      meta: "30 дней · день / месяц / год и напоминания",
       locked: true
     },
     {
@@ -160,6 +160,13 @@ window.NUMEROLOGY = {
       title: "Число проблемы",
       price: "490 ₽",
       meta: "где застреваете и что прорабатывать",
+      locked: true
+    },
+    {
+      id: "character-full",
+      title: "Полный разбор характера",
+      price: "490 ₽",
+      meta: "сильные стороны, тень и как с этим жить",
       locked: true
     },
     {
@@ -180,7 +187,7 @@ window.NUMEROLOGY = {
       id: "dream-deep",
       title: "Глубокий разбор сна",
       price: "490 ₽",
-      meta: "сон + твои числа в одном тексте",
+      meta: "дополнительно · сон через твои числа",
       locked: true
     }
   ]

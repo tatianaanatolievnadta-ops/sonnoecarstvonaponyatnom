@@ -1064,7 +1064,7 @@
         <div class="num-hero">
           <p class="num-kicker">Сонное царство</p>
           <h3>Карточка по дате рождения</h3>
-          <p>Укажи дату — покажу число характера и энергию дня. Как у Софии карта, только про числа и сон.</p>
+          <p>Укажи дату — покажу число характера и энергию дня. Карта по числам, как у Софии.</p>
           <button type="button" class="btn btn-primary" data-go="profile">Указать дату</button>
         </div>`;
     }
@@ -1092,21 +1092,21 @@
     root.innerHTML = `
       ${install}
       ${hero}
+      ${dayCard}
+      <h3 class="shelf-title">Нумерология</h3>
+      <p class="note" style="margin-top:0">Подписка и разовые разборы. Оплата скоро — полка уже как у Софии.</p>
+      <div class="shelf-grid">${shelf}</div>
       <div class="home-ask card">
         <div class="card-body">
-          <p class="eyebrow">Главное вечером</p>
-          <h3>Расскажи сон</h3>
-          <p>Два-три вопроса — и расшифровка. Без вариантов «а / б / в».</p>
-          <button type="button" class="btn btn-primary" data-go="dreams">Открыть чат</button>
+          <p class="eyebrow">Ещё в приложении</p>
+          <h3>Сны и медитации</h3>
+          <p>Расшифровка сна и практики ко сну — рядом, но главная тема здесь числа.</p>
+          <button type="button" class="btn btn-ghost" data-go="dreams">Чат снов</button>
         </div>
       </div>
-      ${dayCard}
       <div class="home-grid home-grid-one">
         <button type="button" class="mini-tile" data-go="meditate"><b>Медитации</b><span>практики ко сну</span></button>
       </div>
-      <h3 class="shelf-title">Разборы — твои навсегда</h3>
-      <p class="note" style="margin-top:0">Скоро оплата. Сейчас — полка как у Софии, под нашу тему.</p>
-      <div class="shelf-grid">${shelf}</div>
       <p class="note">${escapeHtml((window.NUMEROLOGY && NUMEROLOGY.note) || "")}</p>
     `;
 
@@ -1258,7 +1258,7 @@
       const c = snap && snap.character;
       body.innerHTML = `
         <h2>${s.name ? escapeHtml(s.name) + ", " : ""}я готова</h2>
-        <p class="ob-lead">Сон, числа и спокойный вечер — в одном месте.</p>
+        <p class="ob-lead">Числа по дате — в центре. Сны и вечерние практики — рядом.</p>
         ${
           c
             ? `<div class="num-hero ob-reward">
@@ -1269,7 +1269,7 @@
               </div>`
             : ""
         }
-        <p class="note">Прогноз дня и глубокие разборы — откроем с подпиской. Сейчас бесплатно: сны и карточка чисел.</p>`;
+        <p class="note">Бесплатно: карточка и энергия дня. Полные разборы и подписка «Мои числа» — на полке.</p>`;
       next.textContent = "Открыть главную";
     }
   }
