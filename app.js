@@ -1330,8 +1330,13 @@
 
       <div class="card"><div class="card-body">
         <h3>Документы</h3>
-        <p class="note">Реквизиты исполнителя — для оплаты и ЮKassa.</p>
-        <a class="btn btn-ghost" href="requisites.html" style="display:inline-flex;text-decoration:none;margin-top:.5rem">Реквизиты</a>
+        <p class="note">Цены, оферта, согласие и реквизиты — для ЮKassa.</p>
+        <div class="btn-row" style="flex-wrap:wrap;gap:.4rem;margin-top:.55rem">
+          <a class="btn btn-ghost" href="prices.html" style="text-decoration:none">Цены</a>
+          <a class="btn btn-ghost" href="offer.html" style="text-decoration:none">Оферта</a>
+          <a class="btn btn-ghost" href="consent.html" style="text-decoration:none">Согласие</a>
+          <a class="btn btn-ghost" href="requisites.html" style="text-decoration:none">Реквизиты</a>
+        </div>
       </div></div>
 
       <div class="card"><div class="card-body">
