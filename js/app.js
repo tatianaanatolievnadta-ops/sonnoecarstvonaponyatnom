@@ -44,6 +44,8 @@
       if (on) t.setAttribute("aria-current", "page");
       else t.removeAttribute("aria-current");
     });
+    if (name === "home") renderHome();
+    if (name === "numbers") renderNumbers();
     if (name === "moon") renderMoon();
     if (name === "quiz") renderQuiz();
     if (name === "articles") renderArticles();
@@ -53,6 +55,12 @@
       currentAudio.pause();
       currentAudio = null;
     }
+  }
+
+  function getSnap() {
+    const s = Store.get();
+    if (!s.birthDate || !window.Numero) return null;
+    return Numero.snapshot(s.birthDate, { birthHour: s.birthHour });
   }
 
   document.querySelectorAll(".tab").forEach((tab) => {
@@ -802,6 +810,28 @@
     return `<div class="picks"><p class="eyebrow">${escapeHtml(heading || "Можно подобрать")}</p>${cards}${disc}</div>`;
   }
 
+  function articlePlain(a) {
+    return (a.body || [])
+      .map((p) => (p && typeof p === "object" ? p.h || "" : String(p || "")))
+      .join(" ");
+  }
+
+  function articleMinutes(a) {
+    const words = articlePlain(a).trim().split(/\s+/).filter(Boolean).length;
+    return Math.max(1, Math.round(words / 160));
+  }
+
+  function articleBodyHtml(body) {
+    return (body || [])
+      .map((p) => {
+        if (p && typeof p === "object" && p.h) {
+          return `<h3 class="article-h">${escapeHtml(p.h)}</h3>`;
+        }
+        return `<p>${escapeHtml(String(p))}</p>`;
+      })
+      .join("");
+  }
+
   function shopHtml() {
     const aff = window.AFFILIATES || {};
     const items = Object.values(aff.items || {}).filter((i) => i && i.url);
@@ -842,7 +872,7 @@
           <div>
             <h3>${a.title}</h3>
             <p>${a.teaser}</p>
-            <div class="meta">${a.minutes} мин · ${a.topic === "sleep" ? "как спать" : "сны"}</div>
+            <div class="meta">${articleMinutes(a)} мин · ${a.topic === "sleep" ? "как спать" : "сны"}</div>
           </div>
         </button>`
         )
@@ -862,22 +892,14 @@
   function openArticle(id) {
     const a = ARTICLES.find((x) => x.id === id);
     if (!a) return;
-    const splitAt = Math.min(a.picksAfter || 2, (a.body || []).length);
-    const head = (a.body || []).slice(0, splitAt);
-    const rest = (a.body || []).slice(splitAt);
     const offer = picksHtml(a.picks, "Подобрать на Маркете");
     sheetBody.innerHTML = `
-      <h2>${a.title}</h2>
-      <p class="note">${a.minutes} минут · Сонное царство</p>
+      <h2>${escapeHtml(a.title)}</h2>
+      <p class="note">${articleMinutes(a)} мин чтения · Сонное царство</p>
       <div class="article-body" style="margin-top:1rem">
-        ${head.map((p) => `<p>${p}</p>`).join("")}
+        ${articleBodyHtml(a.body)}
       </div>
       ${offer}
-      ${
-        rest.length
-          ? `<div class="article-body">${rest.map((p) => `<p>${p}</p>`).join("")}</div>`
-          : ""
-      }
       <div class="btn-row">
         ${
           a.id === "sleep-by-age"
@@ -1001,6 +1023,285 @@
     return `<label class="switch"><input type="checkbox" id="${id}" ${checked ? "checked" : ""}/><em></em></label>`;
   }
 
+  /* ---------- Home (витрина) ---------- */
+  function renderHome() {
+    const root = $("home-root");
+    if (!root) return;
+    const s = Store.get();
+    const snap = getSnap();
+    const hello = s.name ? `Здравствуй, ${s.name}` : "Здравствуй";
+    const homeHello = $("home-hello");
+    if (homeHello) homeHello.textContent = hello;
+
+    const install =
+      s.installBannerDismissed
+        ? ""
+        : `<div class="install-banner" id="install-banner">
+            <div>
+              <b>Установи на экран телефона</b>
+              <span>Так не потеряется в закладках — и удобнее перед сном</span>
+            </div>
+            <button type="button" class="btn btn-ghost" id="install-how">Как</button>
+            <button type="button" class="icon-btn" id="install-hide" aria-label="Скрыть">×</button>
+          </div>`;
+
+    let hero = "";
+    if (snap && snap.character) {
+      hero = `
+        <div class="num-hero">
+          <p class="num-kicker">Твоя карточка · бесплатно</p>
+          <div class="num-big">${snap.karma}</div>
+          <h3>${escapeHtml(snap.planetKarma.name)}</h3>
+          <p>${escapeHtml(snap.character.lead)}</p>
+          <div class="num-chips">
+            <span>${escapeHtml(snap.planetDay.name)} сегодня</span>
+            <span>год · ${escapeHtml(snap.planetYear.name)}</span>
+          </div>
+          <button type="button" class="btn btn-primary" data-go="numbers">Открыть числа</button>
+        </div>`;
+    } else {
+      hero = `
+        <div class="num-hero">
+          <p class="num-kicker">Сонное царство</p>
+          <h3>Карточка по дате рождения</h3>
+          <p>Укажи дату — покажу число характера и энергию дня. Как у Софии карта, только про числа и сон.</p>
+          <button type="button" class="btn btn-primary" data-go="profile">Указать дату</button>
+        </div>`;
+    }
+
+    const dayCard = snap && snap.dayInfo
+      ? `<div class="card"><div class="card-body">
+          <p class="eyebrow">Энергия дня</p>
+          <h3>${escapeHtml(snap.dayInfo.title)}</h3>
+          <p>${escapeHtml(snap.dayInfo.do)}</p>
+          <p class="note">Не сейчас: ${escapeHtml(snap.dayInfo.dont)}</p>
+        </div></div>`
+      : "";
+
+    const shelf = (window.NUMEROLOGY && NUMEROLOGY.shelf ? NUMEROLOGY.shelf : [])
+      .map(
+        (x) => `
+        <button type="button" class="shelf-tile" data-shelf="${x.id}">
+          <span class="t">${escapeHtml(x.title)}</span>
+          <span class="m">${escapeHtml(x.meta)}</span>
+          <span class="p">${escapeHtml(x.price)}</span>
+        </button>`
+      )
+      .join("");
+
+    root.innerHTML = `
+      ${install}
+      ${hero}
+      <div class="home-ask card">
+        <div class="card-body">
+          <p class="eyebrow">Главное вечером</p>
+          <h3>Расскажи сон</h3>
+          <p>Два-три вопроса — и расшифровка. Без вариантов «а / б / в».</p>
+          <button type="button" class="btn btn-primary" data-go="dreams">Открыть чат</button>
+        </div>
+      </div>
+      ${dayCard}
+      <div class="home-grid home-grid-one">
+        <button type="button" class="mini-tile" data-go="meditate"><b>Медитации</b><span>практики ко сну</span></button>
+      </div>
+      <h3 class="shelf-title">Разборы — твои навсегда</h3>
+      <p class="note" style="margin-top:0">Скоро оплата. Сейчас — полка как у Софии, под нашу тему.</p>
+      <div class="shelf-grid">${shelf}</div>
+      <p class="note">${escapeHtml((window.NUMEROLOGY && NUMEROLOGY.note) || "")}</p>
+    `;
+
+    root.querySelectorAll("[data-go]").forEach((btn) => {
+      btn.addEventListener("click", () => navigate(btn.dataset.go));
+    });
+    root.querySelectorAll("[data-shelf]").forEach((btn) => {
+      btn.addEventListener("click", () =>
+        showToast("Разбор скоро — сначала соберём тексты и оплату")
+      );
+    });
+    const hide = $("install-hide");
+    if (hide) {
+      hide.onclick = () => {
+        Store.update({ installBannerDismissed: true });
+        renderHome();
+      };
+    }
+    const how = $("install-how");
+    if (how) how.onclick = () => navigate("profile");
+  }
+
+  /* ---------- Numbers ---------- */
+  function renderNumbers() {
+    const root = $("numbers-root");
+    if (!root) return;
+    const s = Store.get();
+    const snap = getSnap();
+
+    if (!snap) {
+      root.innerHTML = `
+        <div class="card"><div class="card-body">
+          <h3>Нужна дата рождения</h3>
+          <p>По ней считаю число характера, энергию дня, месяца и года.</p>
+          <label class="note" for="num-birth">Дата рождения</label>
+          <input class="field" type="date" id="num-birth" value="${escapeAttr(s.birthDate || "")}" />
+          <button type="button" class="btn btn-primary" id="num-save-birth">Показать мои числа</button>
+        </div></div>`;
+      $("num-save-birth").onclick = () => {
+        const v = $("num-birth").value;
+        if (!Numero.parseBirth(v)) {
+          showToast("Проверьте дату");
+          return;
+        }
+        Store.update({ birthDate: v });
+        renderNumbers();
+        renderHome();
+      };
+      return;
+    }
+
+    const c = snap.character;
+    root.innerHTML = `
+      <div class="num-hero">
+        <p class="num-kicker">Число характера · ${escapeHtml(snap.planetKarma.name)}</p>
+        <div class="num-big">${snap.karma}</div>
+        <h3>${escapeHtml(c.title)}</h3>
+        <p>${escapeHtml(c.lead)}</p>
+      </div>
+      <div class="card"><div class="card-body">
+        <p class="eyebrow">Сильная сторона</p>
+        <p>${escapeHtml(c.strength)}</p>
+        <p class="eyebrow" style="margin-top:.8rem">Слепая зона</p>
+        <p>${escapeHtml(c.shadow)}</p>
+      </div></div>
+      <div class="period-row">
+        ${periodCard("День", snap.day, snap.planetDay, snap.dayInfo)}
+        ${periodCard("Месяц", snap.month, snap.planetMonth, snap.monthInfo)}
+        ${periodCard("Год", snap.year, snap.planetYear, snap.yearInfo)}
+      </div>
+      <div class="card locked-card"><div class="card-body">
+        <p class="eyebrow">Разбор · скоро</p>
+        <h3>Число проблемы · ${snap.problem} · ${escapeHtml(snap.planetProblem.name)}</h3>
+        <p>${escapeHtml(snap.problemTeaser)}</p>
+        <p class="note">Полный текст и практика — в платном разборе. Экспрессия: ${snap.expression}.</p>
+        <button type="button" class="btn btn-ghost" id="btn-problem-soon">Напомнить, когда откроется</button>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <h3>Дата в расчёте</h3>
+        <p class="note">${escapeHtml(snap.birth.iso)} · соляр с ${snap.solarYearStart}</p>
+        <button type="button" class="btn btn-ghost" data-go="profile">Изменить в профиле</button>
+      </div></div>
+      <p class="note">${escapeHtml(NUMEROLOGY.note)}</p>
+    `;
+    root.querySelectorAll("[data-go]").forEach((b) =>
+      b.addEventListener("click", () => navigate(b.dataset.go))
+    );
+    const soon = $("btn-problem-soon");
+    if (soon) soon.onclick = () => showToast("Запомнила — откроем вместе с оплатой");
+  }
+
+  function periodCard(label, n, planet, info) {
+    return `<div class="card period-card"><div class="card-body">
+      <p class="eyebrow">${label}</p>
+      <div class="period-n">${n}</div>
+      <b>${escapeHtml(planet.name)}</b>
+      <p>${escapeHtml(info ? info.focus : planet.short)}</p>
+    </div></div>`;
+  }
+
+  /* ---------- Onboarding ---------- */
+  let obStep = 0;
+  const OB_TOTAL = 3;
+
+  function needsOnboarding() {
+    const s = Store.get();
+    return !s.onboardingDone || !s.birthDate;
+  }
+
+  function openOnboarding() {
+    const box = $("onboarding");
+    if (!box) return;
+    box.hidden = false;
+    obStep = 0;
+    paintOnboarding();
+  }
+
+  function paintOnboarding() {
+    const s = Store.get();
+    const body = $("ob-body");
+    const stepEl = $("ob-step");
+    const bar = $("ob-bar");
+    const next = $("ob-next");
+    if (!body) return;
+    stepEl.textContent = `${obStep + 1} из ${OB_TOTAL}`;
+    bar.style.width = `${((obStep + 1) / OB_TOTAL) * 100}%`;
+
+    if (obStep === 0) {
+      body.innerHTML = `
+        <h2>Давай настроим под тебя</h2>
+        <p class="ob-lead">Это займёт минуту. Как к тебе обращаться?</p>
+        <label class="note" for="ob-name">Имя</label>
+        <input class="field" id="ob-name" maxlength="40" placeholder="Например, Татьяна" value="${escapeAttr(s.name)}" />`;
+      next.textContent = "Дальше";
+    } else if (obStep === 1) {
+      body.innerHTML = `
+        <h2>Когда ты родилась?</h2>
+        <p class="ob-lead">По дате считаю число характера и энергию дня — без общих гороскопов.</p>
+        <label class="note" for="ob-birth">Дата рождения</label>
+        <input class="field" type="date" id="ob-birth" value="${escapeAttr(s.birthDate || "")}" />
+        <label class="note" for="ob-hour">Время (если знаешь)</label>
+        <select class="field" id="ob-hour">
+          <option value="">Не знаю</option>
+          ${Array.from({ length: 24 }, (_, h) =>
+            `<option value="${h}" ${String(s.birthHour) === String(h) ? "selected" : ""}>${String(h).padStart(2, "0")}:00</option>`
+          ).join("")}
+        </select>`;
+      next.textContent = "Дальше";
+    } else {
+      const snap = getSnap();
+      const c = snap && snap.character;
+      body.innerHTML = `
+        <h2>${s.name ? escapeHtml(s.name) + ", " : ""}я готова</h2>
+        <p class="ob-lead">Сон, числа и спокойный вечер — в одном месте.</p>
+        ${
+          c
+            ? `<div class="num-hero ob-reward">
+                <p class="num-kicker">Твоя карточка</p>
+                <div class="num-big">${snap.karma}</div>
+                <h3>${escapeHtml(snap.planetKarma.name)}</h3>
+                <p>${escapeHtml(c.lead)}</p>
+              </div>`
+            : ""
+        }
+        <p class="note">Прогноз дня и глубокие разборы — откроем с подпиской. Сейчас бесплатно: сны и карточка чисел.</p>`;
+      next.textContent = "Открыть главную";
+    }
+  }
+
+  function advanceOnboarding() {
+    const s = Store.get();
+    if (obStep === 0) {
+      const name = ($("ob-name") && $("ob-name").value.trim()) || "";
+      Store.update({ name });
+      obStep = 1;
+      paintOnboarding();
+      return;
+    }
+    if (obStep === 1) {
+      const birth = $("ob-birth") && $("ob-birth").value;
+      if (!Numero.parseBirth(birth)) {
+        showToast("Укажи дату рождения");
+        return;
+      }
+      const hour = $("ob-hour") ? $("ob-hour").value : "";
+      Store.update({ birthDate: birth, birthHour: hour });
+      obStep = 2;
+      paintOnboarding();
+      return;
+    }
+    Store.update({ onboardingDone: true });
+    $("onboarding").hidden = true;
+    navigate("home");
+  }
+
   function renderProfile() {
     const root = $("profile-root");
     const s = Store.get();
@@ -1009,9 +1310,21 @@
     root.innerHTML = `
       <div class="card"><div class="card-body">
         <h3>О вас</h3>
-        <p class="note">Имя нужно только для тёплого обращения. Всё хранится на этом устройстве.</p>
+        <p class="note">Имя и дата — для обращения и чисел. Всё хранится на этом устройстве.</p>
         <label class="note" for="prof-name">Как к вам обращаться</label>
         <input class="field" id="prof-name" maxlength="40" placeholder="Например, Аня" value="${escapeAttr(s.name)}" />
+        <label class="note" for="prof-birth">Дата рождения</label>
+        <input class="field" type="date" id="prof-birth" value="${escapeAttr(s.birthDate || "")}" />
+        <label class="note" for="prof-hour">Время рождения</label>
+        <select class="field" id="prof-hour">
+          <option value="">Не знаю</option>
+          ${hours
+            .map(
+              (h) =>
+                `<option value="${h}" ${String(s.birthHour) === String(h) ? "selected" : ""}>${String(h).padStart(2, "0")}:00</option>`
+            )
+            .join("")}
+        </select>
         <button type="button" class="btn btn-primary" id="save-name">Сохранить</button>
       </div></div>
 
@@ -1098,7 +1411,16 @@
     paintHistory();
 
     $("save-name").onclick = () => {
-      Store.update({ name: $("prof-name").value.trim() });
+      const birth = $("prof-birth").value;
+      if (birth && !Numero.parseBirth(birth)) {
+        showToast("Проверьте дату рождения");
+        return;
+      }
+      Store.update({
+        name: $("prof-name").value.trim(),
+        birthDate: birth || "",
+        birthHour: $("prof-hour").value
+      });
       showToast("Сохранено");
     };
 
@@ -1257,14 +1579,25 @@
   startNewDream();
   if (Store.get().notify.enabled) Notify.start();
 
+  const obNext = $("ob-next");
+  if (obNext) obNext.addEventListener("click", advanceOnboarding);
+
+  if (needsOnboarding()) {
+    openOnboarding();
+  } else {
+    navigate("home");
+  }
+
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
 
   // Hide short hint after the first user message — more room for the chat
   const dreamHint = $("dream-hint");
-  const obs = new MutationObserver(() => {
-    if (dreamHint && chat.querySelector(".msg.user")) dreamHint.hidden = true;
-  });
-  obs.observe(chat, { childList: true });
+  if (dreamHint && chat) {
+    const obs = new MutationObserver(() => {
+      if (chat.querySelector(".msg.user")) dreamHint.hidden = true;
+    });
+    obs.observe(chat, { childList: true });
+  }
 })();

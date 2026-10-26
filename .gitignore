@@ -1,0 +1,20 @@
+# тяжёлые и рабочие материалы — не в GitHub
+material numero/
+media/
+на рилс/
+медитации/
+scripts/
+*.mkv
+*.mp4
+*.MP4
+*.wav
+*.psd
+*.zip
+.DS_Store
+Thumbs.db
+*.log
+_extract_*.txt
+
+data/_articles_tail.js
+data/_splice_articles.js
+

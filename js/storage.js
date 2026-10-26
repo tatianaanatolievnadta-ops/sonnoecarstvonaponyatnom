@@ -5,6 +5,11 @@
 
   const defaults = {
     name: "",
+    birthDate: "",
+    birthHour: "",
+    priority: "dreams",
+    onboardingDone: false,
+    installBannerDismissed: false,
     saveHistory: true,
     history: [],
     directions: { hair: true, plants: true, beauty: true, affairs: true },

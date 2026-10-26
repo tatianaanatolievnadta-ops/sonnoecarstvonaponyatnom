@@ -1,7 +1,7 @@
 {
   "name": "Сонное царство",
   "short_name": "Сонное царство",
-  "description": "Расшифровка снов, лунный календарь, тест и полезные статьи",
+  "description": "Сны, числа по дате рождения, луна и практики ко сну",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",

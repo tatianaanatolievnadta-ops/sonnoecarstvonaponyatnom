@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#121a2e" />
-  <meta name="description" content="Сонное царство — расскажите сон, получите толкование, послушайте практику ко сну" />
+  <meta name="description" content="Сонное царство — толкование снов, числа по дате рождения, луна и практики ко сну" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Сонное царство" />
@@ -21,7 +21,6 @@
   <title>Сонное царство</title>
 </head>
 <body>
-  <!-- Яндекс Дистрибуция: подтверждение площадки -->
   <p class="yandex-verify" hidden>ftziq42ld1k3nnz1</p>
   <div class="sky" aria-hidden="true">
     <div class="glow glow-a"></div>
@@ -29,9 +28,30 @@
     <div class="stars"></div>
   </div>
 
+  <!-- Онбординг как у Софии: имя → дата → приоритет → награда -->
+  <div id="onboarding" class="onboarding" hidden>
+    <div class="onboarding-inner">
+      <p class="ob-step" id="ob-step">1 из 3</p>
+      <div class="ob-progress"><i id="ob-bar"></i></div>
+      <div id="ob-body"></div>
+      <button type="button" class="btn btn-primary ob-next" id="ob-next">Дальше</button>
+    </div>
+  </div>
+
   <div id="app" class="app">
-    <!-- HOME / DREAMS -->
-    <section class="view active" id="view-dreams" data-view="dreams">
+    <!-- ГЛАВНАЯ / витрина -->
+    <section class="view active" id="view-home" data-view="home">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Сонное царство</p>
+          <h1 class="page-title" id="home-hello">Здравствуй</h1>
+        </div>
+      </header>
+      <div class="scroll-pad" id="home-root"></div>
+    </section>
+
+    <!-- СНЫ / чат -->
+    <section class="view" id="view-dreams" data-view="dreams">
       <header class="page-head">
         <div>
           <p class="eyebrow">Сонное царство</p>
@@ -62,7 +82,18 @@
       </div>
     </section>
 
-    <!-- MOON -->
+    <!-- ЧИСЛА -->
+    <section class="view" id="view-numbers" data-view="numbers">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">По дате рождения</p>
+          <h1 class="page-title">Твои числа</h1>
+        </div>
+      </header>
+      <div class="scroll-pad" id="numbers-root"></div>
+    </section>
+
+    <!-- ЛУНА (из меню убрана — вход с главной) -->
     <section class="view" id="view-moon" data-view="moon">
       <header class="page-head">
         <div>
@@ -119,25 +150,17 @@
   </div>
 
   <nav class="tabbar" aria-label="Главное меню">
-    <button type="button" class="tab active" data-nav="dreams" aria-current="page">
+    <button type="button" class="tab active" data-nav="home" aria-current="page">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-4.5v-5.5h-5V21H5a1 1 0 0 1-1-1z"/></svg>
+      <span>Главная</span>
+    </button>
+    <button type="button" class="tab" data-nav="dreams">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3c-2 3.5-6 5-6 9a6 6 0 0 0 12 0c0-4-4-5.5-6-9z"/><path d="M9 14c.5 1.5 1.5 2.5 3 3"/></svg>
       <span>Сны</span>
     </button>
-    <button type="button" class="tab" data-nav="moon">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 14.5A8.5 8.5 0 1 1 10.5 4 7 7 0 0 0 20 14.5z"/></svg>
-      <span>Луна</span>
-    </button>
-    <button type="button" class="tab" data-nav="quiz">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M8.5 10a3.5 3.5 0 1 1 5.2 3c-.8.6-1.2 1-1.2 2"/><circle cx="12" cy="17.2" r="0.8" fill="currentColor"/></svg>
-      <span>Тесты</span>
-    </button>
-    <button type="button" class="tab" data-nav="meditate">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10v4M7 7v10M12 4v16M17 7v10M21 10v4"/></svg>
-      <span>Аудио</span>
-    </button>
-    <button type="button" class="tab" data-nav="articles">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h10a2 2 0 0 1 2 2v14l-7-3-7 3V6a2 2 0 0 1 2-2z"/><path d="M19 6h0a2 2 0 0 1 2 2v12"/></svg>
-      <span>Статьи</span>
+    <button type="button" class="tab" data-nav="numbers">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>
+      <span>Числа</span>
     </button>
     <button type="button" class="tab" data-nav="profile">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.5"/><path d="M5 19a7 7 0 0 1 14 0"/></svg>
@@ -164,10 +187,12 @@
         ["data/quiz.js", "quiz.js"],
         ["data/sleep-calc.js", "sleep-calc.js"],
         ["data/moon-tips.js", "moon-tips.js"],
+        ["data/numerology.js", "numerology.js"],
         ["js/storage.js", "storage.js"],
         ["js/moon.js", "moon.js"],
         ["js/notifications.js", "notifications.js"],
         ["js/engine.js", "engine.js"],
+        ["js/numerology.js", "numerology-engine.js"],
         ["js/app.js", "app.js"]
       ];
       function load(i) {
