@@ -433,7 +433,7 @@
           Store.update({
             lat: pos.coords.latitude,
             lon: pos.coords.longitude,
-            locationLabel: "Ваше местоположение"
+            locationLabel: "Твоё местоположение"
           });
           showToast("Место обновлено");
           renderMoon();
@@ -612,7 +612,7 @@
     root.innerHTML = `
       <div class="card">
         <div class="card-body">
-          <p class="eyebrow">Ваш результат</p>
+          <p class="eyebrow">Твой результат</p>
           <h3>${escapeHtml(result.name)}</h3>
           <p>${escapeHtml(result.blurb)}</p>
           <div class="tip-item" style="margin-top:1rem">
@@ -738,7 +738,7 @@
         <label class="note" for="calc-time">${calcMode === "wake" ? "Подъём" : "Отход ко сну"}</label>
         <input class="field" id="calc-time" type="time" value="${escapeAttr(calcTime)}" />
 
-        <label class="note" for="calc-fall">Пока засыпаете, минут</label>
+        <label class="note" for="calc-fall">Пока засыпаешь, минут</label>
         <select class="field" id="calc-fall">
           ${[10, 15, 20, 30]
             .map((m) => `<option value="${m}" ${m === fall ? "selected" : ""}>${m}</option>`)
@@ -1064,7 +1064,7 @@
         <div class="num-hero">
           <p class="num-kicker">Сонное царство</p>
           <h3>Карточка по дате рождения</h3>
-          <p>Укажи дату — покажу число характера и энергию дня. Карта по числам, как у Софии.</p>
+          <p>Укажи дату — покажу карточку чисел и энергию дня. Плюс толкование снов — бесплатно.</p>
           <button type="button" class="btn btn-primary" data-go="profile">Указать дату</button>
         </div>`;
     }
@@ -1094,7 +1094,6 @@
       ${hero}
       ${dayCard}
       <h3 class="shelf-title">Нумерология</h3>
-      <p class="note" style="margin-top:0">Подписка и разовые разборы. Оплата скоро — полка уже как у Софии.</p>
       <div class="shelf-grid">${shelf}</div>
       <div class="home-ask card">
         <div class="card-body">
@@ -1148,7 +1147,7 @@
       $("num-save-birth").onclick = () => {
         const v = $("num-birth").value;
         if (!Numero.parseBirth(v)) {
-          showToast("Проверьте дату");
+          showToast("Проверь дату");
           return;
         }
         Store.update({ birthDate: v });
@@ -1422,7 +1421,7 @@
     $("save-name").onclick = () => {
       const birth = $("prof-birth").value;
       if (birth && !Numero.parseBirth(birth)) {
-        showToast("Проверьте дату рождения");
+        showToast("Проверь дату рождения");
         return;
       }
       Store.update({
