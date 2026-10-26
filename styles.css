@@ -561,7 +561,22 @@ body {
   gap: .45rem;
   margin-bottom: .75rem;
 }
+.date-row.time-row { grid-template-columns: 1fr 1fr; }
 .date-row .field { margin-bottom: 0; }
+.planet-table { display: grid; gap: .35rem; margin-top: .65rem; }
+.planet-row {
+  display: grid; grid-template-columns: .9fr 1.4fr .7fr; gap: .35rem;
+  align-items: baseline; font-size: .86rem;
+  padding: .35rem 0; border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.ask-input { min-height: 4.5rem; resize: vertical; }
+.ask-bubble {
+  margin-top: .55rem; padding: .7rem .75rem;
+  border-radius: .85rem; background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+}
+.ask-bubble p { margin: 0 0 .35rem; font-size: .88rem; line-height: 1.4; }
+.ask-bubble p:last-child { margin-bottom: 0; }
 
 /* Home / numbers */
 .install-banner {

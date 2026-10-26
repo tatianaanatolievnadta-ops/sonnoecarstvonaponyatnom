@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#121a2e" />
-  <meta name="description" content="Сонное царство — нумерология по дате рождения, энергия дня и года, сны и практики ко сну" />
+  <meta name="description" content="Сонное царство — натальная карта по дате, времени и городу, числа, толкование снов и 3 бесплатных вопроса" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Сонное царство" />
@@ -86,8 +86,8 @@
     <section class="view" id="view-numbers" data-view="numbers">
       <header class="page-head">
         <div>
-          <p class="eyebrow">По дате рождения</p>
-          <h1 class="page-title">Твои числа</h1>
+          <p class="eyebrow">Дата · время · город</p>
+          <h1 class="page-title">Карта и числа</h1>
         </div>
       </header>
       <div class="scroll-pad" id="numbers-root"></div>
@@ -160,7 +160,7 @@
     </button>
     <button type="button" class="tab" data-nav="numbers">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>
-      <span>Числа</span>
+      <span>Карта</span>
     </button>
     <button type="button" class="tab" data-nav="profile">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.5"/><path d="M5 19a7 7 0 0 1 14 0"/></svg>
@@ -188,11 +188,14 @@
         ["data/sleep-calc.js", "sleep-calc.js"],
         ["data/moon-tips.js", "moon-tips.js"],
         ["data/numerology.js", "numerology.js"],
+        ["data/cities.js", "cities.js"],
+        ["vendor/astronomy.browser.min.js", "astronomy.browser.min.js"],
         ["js/storage.js", "storage.js"],
         ["js/moon.js", "moon.js"],
         ["js/notifications.js", "notifications.js"],
         ["js/engine.js", "engine.js"],
         ["js/numerology.js", "numerology-engine.js"],
+        ["js/natal.js", "natal.js"],
         ["js/app.js", "app.js"]
       ];
       function load(i) {

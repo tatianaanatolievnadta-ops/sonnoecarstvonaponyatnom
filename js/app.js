@@ -63,6 +63,138 @@
     return Numero.snapshot(s.birthDate, { birthHour: s.birthHour });
   }
 
+  function getNatalChart() {
+    const s = Store.get();
+    if (!s.birthDate || s.birthHour === "" || s.birthHour == null) return null;
+    if (s.birthLat == null || s.birthLon == null || !window.Natal) return null;
+    const chart = Natal.chart({
+      isoDate: s.birthDate,
+      hour: Number(s.birthHour),
+      minute: Number(s.birthMinute) || 0,
+      lat: Number(s.birthLat),
+      lon: Number(s.birthLon),
+      utcOffset: s.birthUtcOffset != null ? s.birthUtcOffset : 3,
+      cityName: s.birthCity || ""
+    });
+    return chart && !chart.error ? chart : null;
+  }
+
+  function cityOptionsHtml(selectedId) {
+    const list = window.BIRTH_CITIES || [];
+    return (
+      `<option value="">Выбери город</option>` +
+      list
+        .map(
+          (c) =>
+            `<option value="${escapeAttr(c.id)}" ${selectedId === c.id ? "selected" : ""}>${escapeHtml(c.name)}</option>`
+        )
+        .join("")
+    );
+  }
+
+  function applyCityId(id) {
+    const c = window.Natal ? Natal.findCity(id) : (window.BIRTH_CITIES || []).find((x) => x.id === id);
+    if (!c) {
+      return {
+        birthCityId: "",
+        birthCity: "",
+        birthLat: null,
+        birthLon: null,
+        birthUtcOffset: 3
+      };
+    }
+    return {
+      birthCityId: c.id,
+      birthCity: c.name,
+      birthLat: c.lat,
+      birthLon: c.lon,
+      birthUtcOffset: c.utc
+    };
+  }
+
+  function timeSelectHtml(prefix, hourVal, minuteVal) {
+    const h = hourVal === "" || hourVal == null ? "" : String(hourVal);
+    const m = minuteVal === "" || minuteVal == null ? "0" : String(Number(minuteVal));
+    const hours = Array.from({ length: 24 }, (_, i) => i);
+    const mins = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+    return `
+      <div class="date-row time-row">
+        <div>
+          <label class="note" for="${prefix}-hour">Час</label>
+          <select class="field" id="${prefix}-hour">
+            <option value="">Не знаю</option>
+            ${hours
+              .map(
+                (x) =>
+                  `<option value="${x}" ${h === String(x) ? "selected" : ""}>${String(x).padStart(2, "0")}</option>`
+              )
+              .join("")}
+          </select>
+        </div>
+        <div>
+          <label class="note" for="${prefix}-min">Минута</label>
+          <select class="field" id="${prefix}-min" ${h === "" ? "disabled" : ""}>
+            ${mins
+              .map(
+                (x) =>
+                  `<option value="${x}" ${m === String(x) ? "selected" : ""}>${String(x).padStart(2, "0")}</option>`
+              )
+              .join("")}
+          </select>
+        </div>
+      </div>`;
+  }
+
+  function wireTimeSelect(prefix) {
+    const hEl = $(`${prefix}-hour`);
+    const mEl = $(`${prefix}-min`);
+    if (!hEl || !mEl) return;
+    hEl.addEventListener("change", () => {
+      mEl.disabled = hEl.value === "";
+      if (hEl.value === "") mEl.value = "0";
+      blockObNext(300);
+    });
+    mEl.addEventListener("change", () => blockObNext(300));
+  }
+
+  function autoAskReply(question) {
+    const q = String(question || "").toLowerCase();
+    const snap = getSnap();
+    const natal = getNatalChart();
+    const sun = natal && natal.sun ? natal.sun.sign : null;
+    const moon = natal && natal.moon ? natal.moon.sign : null;
+    const asc = natal && natal.asc ? natal.asc.sign : null;
+    const karma = snap ? snap.karma : null;
+    const planet = snap && snap.planetKarma ? snap.planetKarma.name : null;
+
+    if (/сон|снился|присни|кошмар/.test(q)) {
+      return `Сон лучше разобрать во вкладке «Сны» — там авторасшифровка. По карте: ${
+        moon ? `Луна в ${moon}` : "укажи время и город"
+      }${karma ? `, число характера ${karma}${planet ? " · " + planet : ""}` : ""}. Это мягкий ориентир, не приговор.`;
+    }
+    if (/люб|отнош|пар|муж|жен|брак|совмест/.test(q)) {
+      return `В отношениях смотри на Луну и Венеру. ${
+        moon ? `Луна в ${moon}` : "Нужны время и город для точной Луны"
+      }${
+        natal
+          ? `, Венера — ${natal.planets.find((p) => p.id === "venus").label}`
+          : ""
+      }. Для двоих позже откроется разбор совместимости на полке.`;
+    }
+    if (/деньг|работ|карьер|бизнес|финанс/.test(q)) {
+      return `Деньги и дело — зона 2 и 10 домов и Сатурн/Юпитер. ${
+        natal
+          ? `Сатурн: ${natal.planets.find((p) => p.id === "saturn").label}, Юпитер: ${natal.planets.find((p) => p.id === "jupiter").label}.`
+          : "Сначала заполни дату, время и город — посчитаю планеты."
+      } Число характера ${karma || "—"} подскажет стиль действия.`;
+    }
+    return `Смотрю на твою карту${sun ? `: Солнце в ${sun}` : ""}${
+      moon ? `, Луна в ${moon}` : ""
+    }${asc ? `, асцендент ${asc}` : ""}${
+      karma ? `. Число характера — ${karma}${planet ? " (" + planet + ")" : ""}` : ""
+    }. Сформулируй вопрос чуть конкретнее (сон / любовь / дело) — отвечу в рамках трёх бесплатных. Это ориентир для самопознания, не предсказание.`;
+  }
+
   const MONTH_NAMES = [
     "январь", "февраль", "март", "апрель", "май", "июнь",
     "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"
@@ -1144,27 +1276,39 @@
             <button type="button" class="icon-btn" id="install-hide" aria-label="Скрыть">×</button>
           </div>`;
 
+    const natal = getNatalChart();
+    const left = s.freeQuestionsLeft == null ? 3 : s.freeQuestionsLeft;
+
     let hero = "";
-    if (snap && snap.character) {
+    if (natal) {
       hero = `
         <div class="num-hero">
-          <p class="num-kicker">Твоя карточка · бесплатно</p>
+          <p class="num-kicker">Натальная карта · бесплатно</p>
+          <h3>Солнце в ${escapeHtml(natal.sun.sign)}</h3>
+          <p>Луна · ${escapeHtml(natal.moon.sign)} · ASC · ${escapeHtml(natal.asc.sign)}</p>
+          <div class="num-chips">
+            <span>${escapeHtml(natal.city || "город")}</span>
+            ${snap ? `<span>число · ${snap.karma}</span>` : ""}
+          </div>
+          <button type="button" class="btn btn-primary" data-go="numbers">Открыть карту</button>
+        </div>`;
+    } else if (snap && snap.character) {
+      hero = `
+        <div class="num-hero">
+          <p class="num-kicker">Твоя карточка чисел · бесплатно</p>
           <div class="num-big">${snap.karma}</div>
           <h3>${escapeHtml(snap.planetKarma.name)}</h3>
           <p>${escapeHtml(snap.character.lead)}</p>
-          <div class="num-chips">
-            <span>${escapeHtml(snap.planetDay.name)} сегодня</span>
-            <span>год · ${escapeHtml(snap.planetYear.name)}</span>
-          </div>
-          <button type="button" class="btn btn-primary" data-go="numbers">Открыть числа</button>
+          <p class="note">Добавь время и город в профиле — открою натальную карту.</p>
+          <button type="button" class="btn btn-primary" data-go="profile">Дополнить данные</button>
         </div>`;
     } else {
       hero = `
         <div class="num-hero">
           <p class="num-kicker">Сонное царство</p>
-          <h3>Карточка по дате рождения</h3>
-          <p>Укажи дату — покажу карточку чисел и энергию дня. Плюс толкование снов — бесплатно.</p>
-          <button type="button" class="btn btn-primary" data-go="profile">Указать дату</button>
+          <h3>Натальная карта и числа</h3>
+          <p>Дата, время и город — карта планет. Плюс толкование снов и 3 вопроса бесплатно.</p>
+          <button type="button" class="btn btn-primary" data-go="profile">Указать данные</button>
         </div>`;
     }
 
@@ -1177,6 +1321,23 @@
         </div></div>`
       : "";
 
+    const askCard = `
+      <div class="card" id="ask-card">
+        <div class="card-body">
+          <p class="eyebrow">3 вопроса мне · бесплатно</p>
+          <h3>Осталось: ${left}</h3>
+          <p>Спроси про карту, сон, любовь или дело — отвечу автоматически по твоим данным.</p>
+          ${
+            left > 0
+              ? `<textarea class="field ask-input" id="ask-q" rows="3" placeholder="Напиши вопрос…"></textarea>
+                 <button type="button" class="btn btn-primary" id="ask-send" style="margin-top:.55rem">Спросить</button>`
+              : `<p class="note">Лимит израсходован. Полные разборы — на полке ниже.</p>
+                 <a class="btn btn-ghost" href="prices.html" style="display:inline-flex;text-decoration:none;margin-top:.35rem">Смотреть цены</a>`
+          }
+          <div id="ask-thread" style="margin-top:.75rem"></div>
+        </div>
+      </div>`;
+
     const shelf = (window.NUMEROLOGY && NUMEROLOGY.shelf ? NUMEROLOGY.shelf : [])
       .map(
         (x) => `
@@ -1188,17 +1349,29 @@
       )
       .join("");
 
+    const past = (s.freeQuestions || [])
+      .slice(0, 3)
+      .map(
+        (item) => `
+        <div class="ask-bubble">
+          <p class="ask-q"><b>Ты:</b> ${escapeHtml(item.q)}</p>
+          <p class="ask-a"><b>Ответ:</b> ${escapeHtml(item.a)}</p>
+        </div>`
+      )
+      .join("");
+
     root.innerHTML = `
       ${install}
       ${hero}
+      ${askCard}
       ${dayCard}
-      <h3 class="shelf-title">Нумерология</h3>
+      <h3 class="shelf-title">Разборы</h3>
       <div class="shelf-grid">${shelf}</div>
       <div class="home-ask card">
         <div class="card-body">
           <p class="eyebrow">Ещё в приложении</p>
           <h3>Сны и медитации</h3>
-          <p>Расшифровка сна и практики ко сну — рядом, но главная тема здесь числа.</p>
+          <p>Расшифровка сна и практики ко сну.</p>
           <button type="button" class="btn btn-ghost" data-go="dreams">Чат снов</button>
         </div>
       </div>
@@ -1208,6 +1381,9 @@
       <p class="note">${escapeHtml((window.NUMEROLOGY && NUMEROLOGY.note) || "")}</p>
     `;
 
+    const thread = $("ask-thread");
+    if (thread) thread.innerHTML = past;
+
     root.querySelectorAll("[data-go]").forEach((btn) => {
       btn.addEventListener("click", () => navigate(btn.dataset.go));
     });
@@ -1216,6 +1392,31 @@
         location.href = "pay.html?item=" + encodeURIComponent(btn.dataset.shelf || "sub");
       });
     });
+    const askSend = $("ask-send");
+    if (askSend) {
+      askSend.onclick = () => {
+        const st = Store.get();
+        const remain = st.freeQuestionsLeft == null ? 3 : st.freeQuestionsLeft;
+        if (remain <= 0) {
+          showToast("Бесплатные вопросы закончились");
+          return;
+        }
+        const q = ($("ask-q") && $("ask-q").value.trim()) || "";
+        if (q.length < 3) {
+          showToast("Напиши вопрос чуть подробнее");
+          return;
+        }
+        const a = autoAskReply(q);
+        const list = Array.isArray(st.freeQuestions) ? st.freeQuestions.slice() : [];
+        list.unshift({ q, a, at: new Date().toISOString() });
+        Store.update({
+          freeQuestionsLeft: remain - 1,
+          freeQuestions: list.slice(0, 10)
+        });
+        showToast("Ответ готов · осталось " + (remain - 1));
+        renderHome();
+      };
+    }
     const hide = $("install-hide");
     if (hide) {
       hide.onclick = () => {
@@ -1258,7 +1459,33 @@
     }
 
     const c = snap.character;
+    const natal = getNatalChart();
+    const natalBlock = natal
+      ? `<div class="card"><div class="card-body">
+          <p class="eyebrow">Натальная карта</p>
+          <h3>${escapeHtml(natal.city)} · ${escapeHtml(s.birthDate)} · ${String(s.birthHour).padStart(2, "0")}:${String(Number(s.birthMinute) || 0).padStart(2, "0")}</h3>
+          <p class="note">Солнце · ${escapeHtml(natal.sun.label)} · Луна · ${escapeHtml(natal.moon.label)} · ASC · ${escapeHtml(natal.asc.label)}</p>
+          <div class="planet-table">
+            ${natal.planets
+              .map(
+                (p) =>
+                  `<div class="planet-row"><span>${escapeHtml(p.name)}</span><span>${escapeHtml(p.label)}</span><span class="note">дом ${p.house}</span></div>`
+              )
+              .join("")}
+            <div class="planet-row"><span>Асцендент</span><span>${escapeHtml(natal.asc.label)}</span><span class="note">ASC</span></div>
+            <div class="planet-row"><span>MC</span><span>${escapeHtml(natal.mc.label)}</span><span class="note">середина неба</span></div>
+          </div>
+          <p class="note" style="margin-top:.7rem">${escapeHtml(natal.sourceNote)}</p>
+        </div></div>`
+      : `<div class="card"><div class="card-body">
+          <p class="eyebrow">Натальная карта</p>
+          <h3>Нужны время и город</h3>
+          <p>Дата уже есть. Добавь час, минуту и город — посчитаю положение планет и асцендент.</p>
+          <button type="button" class="btn btn-primary" data-go="profile">Указать в профиле</button>
+        </div></div>`;
+
     root.innerHTML = `
+      ${natalBlock}
       <div class="num-hero">
         <p class="num-kicker">Число характера · ${escapeHtml(snap.planetKarma.name)}</p>
         <div class="num-big">${snap.karma}</div>
@@ -1277,15 +1504,15 @@
         ${periodCard("Год", snap.year, snap.planetYear, snap.yearInfo)}
       </div>
       <div class="card locked-card"><div class="card-body">
-        <p class="eyebrow">Разбор · скоро</p>
+        <p class="eyebrow">Разбор</p>
         <h3>Число проблемы · ${snap.problem} · ${escapeHtml(snap.planetProblem.name)}</h3>
         <p>${escapeHtml(snap.problemTeaser)}</p>
-        <p class="note">Полный текст и практика — в платном разборе. Экспрессия: ${snap.expression}.</p>
+        <p class="note">Полный текст — в платном разборе. Экспрессия: ${snap.expression}.</p>
         <a class="btn btn-primary" href="pay.html?item=problem" style="display:inline-flex;text-decoration:none;margin-top:.35rem">Перейти к оформлению · 490 ₽</a>
       </div></div>
       <div class="card"><div class="card-body">
-        <h3>Дата в расчёте</h3>
-        <p class="note">${escapeHtml(snap.birth.iso)} · соляр с ${snap.solarYearStart}</p>
+        <h3>Данные в расчёте</h3>
+        <p class="note">${escapeHtml(snap.birth.iso)}${s.birthHour !== "" && s.birthHour != null ? ` · ${String(s.birthHour).padStart(2, "0")}:${String(Number(s.birthMinute) || 0).padStart(2, "0")}` : ""}${s.birthCity ? ` · ${escapeHtml(s.birthCity)}` : ""} · соляр с ${snap.solarYearStart}</p>
         <button type="button" class="btn btn-ghost" data-go="profile">Изменить в профиле</button>
       </div></div>
       <p class="note">${escapeHtml(NUMEROLOGY.note)}</p>
@@ -1340,39 +1567,46 @@
       next.textContent = "Дальше";
     } else if (obStep === 1) {
       body.innerHTML = `
-        <h2>Когда ты родилась?</h2>
-        <p class="ob-lead">По дате считаю число характера и энергию дня — без общих гороскопов.</p>
+        <h2>Дата, время и город</h2>
+        <p class="ob-lead">Так считаю натальную карту по минуте рождения и числа по дате — не общий гороскоп.</p>
         <p class="note" style="margin:0 0 .35rem">Дата рождения</p>
         ${birthSelectHtml("ob-birth", s.birthDate)}
-        <label class="note" for="ob-hour">Время (если знаешь)</label>
-        <select class="field" id="ob-hour">
-          <option value="">Не знаю</option>
-          ${Array.from({ length: 24 }, (_, h) =>
-            `<option value="${h}" ${String(s.birthHour) === String(h) ? "selected" : ""}>${String(h).padStart(2, "0")}:00</option>`
-          ).join("")}
-        </select>`;
+        <p class="note" style="margin:0 0 .35rem">Время рождения</p>
+        ${timeSelectHtml("ob", s.birthHour, s.birthMinute)}
+        <label class="note" for="ob-city">Город рождения</label>
+        <select class="field" id="ob-city">${cityOptionsHtml(s.birthCityId)}</select>
+        <p class="note">Время и город нужны для асцендента и домов. Если время не знаешь — числа всё равно посчитаю.</p>`;
       next.textContent = "Дальше";
       blockObNext(500);
       wireBirthSelect("ob-birth", () => blockObNext(350));
-      const hourEl = $("ob-hour");
-      if (hourEl) hourEl.addEventListener("change", () => blockObNext(350));
+      wireTimeSelect("ob");
+      const cityEl = $("ob-city");
+      if (cityEl) cityEl.addEventListener("change", () => blockObNext(350));
     } else {
       const snap = getSnap();
       const c = snap && snap.character;
+      const natal = getNatalChart();
       body.innerHTML = `
         <h2>${s.name ? escapeHtml(s.name) + ", " : ""}я готова</h2>
-        <p class="ob-lead">Числа по дате — в центре. Сны и вечерние практики — рядом.</p>
+        <p class="ob-lead">Натальная карта, числа и сны — в одном месте. Ещё 3 вопроса мне бесплатно.</p>
         ${
-          c
+          natal
             ? `<div class="num-hero ob-reward">
-                <p class="num-kicker">Твоя карточка</p>
+                <p class="num-kicker">Натальная карта</p>
+                <h3>Солнце · ${escapeHtml(natal.sun.sign)}</h3>
+                <p>Луна · ${escapeHtml(natal.moon.sign)} · ASC · ${escapeHtml(natal.asc.sign)}</p>
+                <p class="note" style="margin-top:.45rem">${escapeHtml(natal.city)} · планеты по эфемеридам</p>
+              </div>`
+            : c
+              ? `<div class="num-hero ob-reward">
+                <p class="num-kicker">Твоя карточка чисел</p>
                 <div class="num-big">${snap.karma}</div>
                 <h3>${escapeHtml(snap.planetKarma.name)}</h3>
                 <p>${escapeHtml(c.lead)}</p>
               </div>`
-            : ""
+              : ""
         }
-        <p class="note">Бесплатно: карточка и энергия дня. Полные разборы и подписка «Мои числа» — на полке.</p>`;
+        <p class="note">Бесплатно: карта (если есть время и город), числа, сны и 3 вопроса. Полные разборы — на полке.</p>`;
       next.textContent = "Открыть главную";
     }
   }
@@ -1394,7 +1628,22 @@
         return;
       }
       const hour = $("ob-hour") ? $("ob-hour").value : "";
-      Store.update({ birthDate: birth, birthHour: hour });
+      const minute = $("ob-min") ? $("ob-min").value : "0";
+      const cityId = $("ob-city") ? $("ob-city").value : "";
+      if (hour !== "" && !cityId) {
+        showToast("Для карты укажи город рождения");
+        return;
+      }
+      Store.update(
+        Object.assign(
+          {
+            birthDate: birth,
+            birthHour: hour,
+            birthMinute: hour === "" ? "0" : minute || "0"
+          },
+          applyCityId(cityId)
+        )
+      );
       obStep = 2;
       paintOnboarding();
       return;
@@ -1412,21 +1661,15 @@
     root.innerHTML = `
       <div class="card"><div class="card-body">
         <h3>О тебе</h3>
-        <p class="note">Имя и дата — для обращения и чисел. Всё хранится на этом устройстве.</p>
+        <p class="note">Дата, время и город — для натальной карты и чисел. Всё на этом устройстве.</p>
         <label class="note" for="prof-name">Как к тебе обращаться</label>
         <input class="field" id="prof-name" maxlength="40" placeholder="Например, Аня" value="${escapeAttr(s.name)}" />
         <p class="note" style="margin:0 0 .35rem">Дата рождения</p>
         ${birthSelectHtml("prof-birth", s.birthDate)}
-        <label class="note" for="prof-hour">Время рождения</label>
-        <select class="field" id="prof-hour">
-          <option value="">Не знаю</option>
-          ${hours
-            .map(
-              (h) =>
-                `<option value="${h}" ${String(s.birthHour) === String(h) ? "selected" : ""}>${String(h).padStart(2, "0")}:00</option>`
-            )
-            .join("")}
-        </select>
+        <p class="note" style="margin:0 0 .35rem">Время рождения</p>
+        ${timeSelectHtml("prof", s.birthHour, s.birthMinute)}
+        <label class="note" for="prof-city">Город рождения</label>
+        <select class="field" id="prof-city">${cityOptionsHtml(s.birthCityId)}</select>
         <button type="button" class="btn btn-primary" id="save-name">Сохранить</button>
       </div></div>
 
@@ -1523,6 +1766,7 @@
 
     paintHistory();
     wireBirthSelect("prof-birth");
+    wireTimeSelect("prof");
 
     $("save-name").onclick = () => {
       const dEl = $("prof-birth-d");
@@ -1534,12 +1778,25 @@
         showToast("Укажи день, месяц и год полностью");
         return;
       }
-      Store.update({
-        name: $("prof-name").value.trim(),
-        birthDate: birth || "",
-        birthHour: $("prof-hour").value
-      });
-      showToast("Сохранено");
+      const hour = $("prof-hour") ? $("prof-hour").value : "";
+      const minute = $("prof-min") ? $("prof-min").value : "0";
+      const cityId = $("prof-city") ? $("prof-city").value : "";
+      if (hour !== "" && !cityId) {
+        showToast("Для карты укажи город рождения");
+        return;
+      }
+      Store.update(
+        Object.assign(
+          {
+            name: $("prof-name").value.trim(),
+            birthDate: birth || "",
+            birthHour: hour,
+            birthMinute: hour === "" ? "0" : minute || "0"
+          },
+          applyCityId(cityId)
+        )
+      );
+      showToast(hour !== "" && cityId ? "Сохранено · карта обновлена" : "Сохранено");
     };
 
     $("tog-history").onchange = (e) => {
