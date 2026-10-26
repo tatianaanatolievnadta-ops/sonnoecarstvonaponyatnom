@@ -63,6 +63,105 @@
     return Numero.snapshot(s.birthDate, { birthHour: s.birthHour });
   }
 
+  const MONTH_NAMES = [
+    "январь", "февраль", "март", "апрель", "май", "июнь",
+    "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"
+  ];
+
+  function parseIsoParts(iso) {
+    if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return { y: "", m: "", d: "" };
+    const [y, m, d] = iso.split("-");
+    return { y, m: String(Number(m)), d: String(Number(d)) };
+  }
+
+  function daysInMonth(y, m) {
+    const yi = Number(y) || 2000;
+    const mi = Number(m) || 1;
+    return new Date(yi, mi, 0).getDate();
+  }
+
+  /** День / месяц / год — без нативного календаря (на телефоне он «проскакивает» в кнопку). */
+  function birthSelectHtml(prefix, iso) {
+    const p = parseIsoParts(iso);
+    const nowY = new Date().getFullYear();
+    const years = [];
+    for (let y = nowY - 10; y >= 1940; y--) years.push(y);
+    const maxD = daysInMonth(p.y || 2000, p.m || 1);
+    const days = Array.from({ length: maxD }, (_, i) => i + 1);
+    return `
+      <div class="date-row" id="${prefix}-row">
+        <div>
+          <label class="note" for="${prefix}-d">День</label>
+          <select class="field" id="${prefix}-d">
+            <option value="">—</option>
+            ${days.map((d) => `<option value="${d}" ${String(p.d) === String(d) ? "selected" : ""}>${d}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label class="note" for="${prefix}-m">Месяц</label>
+          <select class="field" id="${prefix}-m">
+            <option value="">—</option>
+            ${MONTH_NAMES.map((name, i) => {
+              const m = i + 1;
+              return `<option value="${m}" ${String(p.m) === String(m) ? "selected" : ""}>${name}</option>`;
+            }).join("")}
+          </select>
+        </div>
+        <div>
+          <label class="note" for="${prefix}-y">Год</label>
+          <select class="field" id="${prefix}-y">
+            <option value="">—</option>
+            ${years.map((y) => `<option value="${y}" ${String(p.y) === String(y) ? "selected" : ""}>${y}</option>`).join("")}
+          </select>
+        </div>
+      </div>`;
+  }
+
+  function readBirthSelect(prefix) {
+    const y = $(`${prefix}-y`) && $(`${prefix}-y`).value;
+    const m = $(`${prefix}-m`) && $(`${prefix}-m`).value;
+    const d = $(`${prefix}-d`) && $(`${prefix}-d`).value;
+    if (!y || !m || !d) return "";
+    const maxD = daysInMonth(y, m);
+    const day = Math.min(Number(d), maxD);
+    const iso = `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    if (!window.Numero || !Numero.parseBirth(iso)) return "";
+    return iso;
+  }
+
+  function wireBirthSelect(prefix, onChange) {
+    const syncDays = () => {
+      const yEl = $(`${prefix}-y`);
+      const mEl = $(`${prefix}-m`);
+      const dEl = $(`${prefix}-d`);
+      if (!yEl || !mEl || !dEl) return;
+      const prev = dEl.value;
+      const maxD = daysInMonth(yEl.value || 2000, mEl.value || 1);
+      dEl.innerHTML =
+        `<option value="">—</option>` +
+        Array.from({ length: maxD }, (_, i) => {
+          const d = i + 1;
+          const sel = String(prev) === String(d) && d <= maxD ? " selected" : "";
+          return `<option value="${d}"${sel}>${d}</option>`;
+        }).join("");
+      if (prev && Number(prev) > maxD) dEl.value = String(maxD);
+      if (onChange) onChange();
+    };
+    ["y", "m", "d"].forEach((k) => {
+      const el = $(`${prefix}-${k}`);
+      if (!el) return;
+      el.addEventListener("change", () => {
+        if (k !== "d") syncDays();
+        else if (onChange) onChange();
+      });
+    });
+  }
+
+  let obNextBlockedUntil = 0;
+  function blockObNext(ms) {
+    obNextBlockedUntil = Date.now() + (ms || 450);
+  }
+
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => navigate(tab.dataset.nav));
   });
@@ -1140,14 +1239,15 @@
         <div class="card"><div class="card-body">
           <h3>Нужна дата рождения</h3>
           <p>По ней считаю число характера, энергию дня, месяца и года.</p>
-          <label class="note" for="num-birth">Дата рождения</label>
-          <input class="field" type="date" id="num-birth" value="${escapeAttr(s.birthDate || "")}" />
+          <p class="note" style="margin:0 0 .35rem">Дата рождения</p>
+          ${birthSelectHtml("num-birth", s.birthDate)}
           <button type="button" class="btn btn-primary" id="num-save-birth">Показать мои числа</button>
         </div></div>`;
+      wireBirthSelect("num-birth");
       $("num-save-birth").onclick = () => {
-        const v = $("num-birth").value;
-        if (!Numero.parseBirth(v)) {
-          showToast("Проверь дату");
+        const v = readBirthSelect("num-birth");
+        if (!v) {
+          showToast("Укажи день, месяц и год");
           return;
         }
         Store.update({ birthDate: v });
@@ -1242,8 +1342,8 @@
       body.innerHTML = `
         <h2>Когда ты родилась?</h2>
         <p class="ob-lead">По дате считаю число характера и энергию дня — без общих гороскопов.</p>
-        <label class="note" for="ob-birth">Дата рождения</label>
-        <input class="field" type="date" id="ob-birth" value="${escapeAttr(s.birthDate || "")}" />
+        <p class="note" style="margin:0 0 .35rem">Дата рождения</p>
+        ${birthSelectHtml("ob-birth", s.birthDate)}
         <label class="note" for="ob-hour">Время (если знаешь)</label>
         <select class="field" id="ob-hour">
           <option value="">Не знаю</option>
@@ -1252,6 +1352,10 @@
           ).join("")}
         </select>`;
       next.textContent = "Дальше";
+      blockObNext(500);
+      wireBirthSelect("ob-birth", () => blockObNext(350));
+      const hourEl = $("ob-hour");
+      if (hourEl) hourEl.addEventListener("change", () => blockObNext(350));
     } else {
       const snap = getSnap();
       const c = snap && snap.character;
@@ -1274,6 +1378,7 @@
   }
 
   function advanceOnboarding() {
+    if (Date.now() < obNextBlockedUntil) return;
     const s = Store.get();
     if (obStep === 0) {
       const name = ($("ob-name") && $("ob-name").value.trim()) || "";
@@ -1283,9 +1388,9 @@
       return;
     }
     if (obStep === 1) {
-      const birth = $("ob-birth") && $("ob-birth").value;
-      if (!Numero.parseBirth(birth)) {
-        showToast("Укажи дату рождения");
+      const birth = readBirthSelect("ob-birth");
+      if (!birth) {
+        showToast("Укажи день, месяц и год");
         return;
       }
       const hour = $("ob-hour") ? $("ob-hour").value : "";
@@ -1306,12 +1411,12 @@
 
     root.innerHTML = `
       <div class="card"><div class="card-body">
-        <h3>О вас</h3>
+        <h3>О тебе</h3>
         <p class="note">Имя и дата — для обращения и чисел. Всё хранится на этом устройстве.</p>
-        <label class="note" for="prof-name">Как к вам обращаться</label>
+        <label class="note" for="prof-name">Как к тебе обращаться</label>
         <input class="field" id="prof-name" maxlength="40" placeholder="Например, Аня" value="${escapeAttr(s.name)}" />
-        <label class="note" for="prof-birth">Дата рождения</label>
-        <input class="field" type="date" id="prof-birth" value="${escapeAttr(s.birthDate || "")}" />
+        <p class="note" style="margin:0 0 .35rem">Дата рождения</p>
+        ${birthSelectHtml("prof-birth", s.birthDate)}
         <label class="note" for="prof-hour">Время рождения</label>
         <select class="field" id="prof-hour">
           <option value="">Не знаю</option>
@@ -1417,11 +1522,16 @@
     `;
 
     paintHistory();
+    wireBirthSelect("prof-birth");
 
     $("save-name").onclick = () => {
-      const birth = $("prof-birth").value;
-      if (birth && !Numero.parseBirth(birth)) {
-        showToast("Проверь дату рождения");
+      const dEl = $("prof-birth-d");
+      const mEl = $("prof-birth-m");
+      const yEl = $("prof-birth-y");
+      const anyPart = (dEl && dEl.value) || (mEl && mEl.value) || (yEl && yEl.value);
+      const birth = readBirthSelect("prof-birth");
+      if (anyPart && !birth) {
+        showToast("Укажи день, месяц и год полностью");
         return;
       }
       Store.update({
