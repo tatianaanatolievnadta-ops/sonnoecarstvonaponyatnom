@@ -774,48 +774,133 @@
     input.focus();
   }
 
+  let speechBase = "";
+  let speechStarting = false;
+
+  function ensureSpeechEngine() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return null;
+    const rec = new SR();
+    rec.lang = "ru-RU";
+    rec.interimResults = true;
+    rec.continuous = true;
+    rec.maxAlternatives = 1;
+    rec.onstart = () => {
+      recognizing = true;
+      speechStarting = false;
+      btnMic.classList.add("recording");
+      btnMic.setAttribute("aria-pressed", "true");
+      showToast("Слушаю… нажми ещё раз, чтобы остановить");
+    };
+    rec.onerror = (e) => {
+      speechStarting = false;
+      const err = e.error || "";
+      if (err === "aborted") return;
+      recognizing = false;
+      btnMic.classList.remove("recording");
+      btnMic.setAttribute("aria-pressed", "false");
+      if (err === "not-allowed" || err === "service-not-allowed") {
+        showToast("Разреши микрофон в настройках браузера");
+      } else if (err === "no-speech") {
+        showToast("Не слышу — говори ближе к микрофону");
+      } else if (err === "network") {
+        showToast("Нужен интернет для распознавания речи");
+      } else if (err === "audio-capture") {
+        showToast("Микрофон недоступен на этом устройстве");
+      } else {
+        showToast("Речь не распозналась — попробуй ещё раз");
+      }
+    };
+    rec.onend = () => {
+      recognizing = false;
+      speechStarting = false;
+      btnMic.classList.remove("recording");
+      btnMic.setAttribute("aria-pressed", "false");
+    };
+    rec.onresult = (event) => {
+      let finalChunk = "";
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const piece = event.results[i][0].transcript || "";
+        if (event.results[i].isFinal) finalChunk += piece;
+        else interim += piece;
+      }
+      if (finalChunk) {
+        speechBase = (speechBase ? speechBase + " " : "") + finalChunk.trim();
+        input.value = speechBase;
+      } else {
+        input.value = (speechBase ? speechBase + " " : "") + interim.trim();
+      }
+      autosize();
+    };
+    return rec;
+  }
+
+  async function requestMicAccess() {
+    if (!window.isSecureContext) {
+      showToast("Голос работает только по защищённой ссылке (https)");
+      return false;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return true;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true
+        }
+      });
+      stream.getTracks().forEach((t) => t.stop());
+      return true;
+    } catch (err) {
+      const name = (err && err.name) || "";
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+        showToast("Разреши доступ к микрофону и нажми ещё раз");
+      } else if (name === "NotFoundError") {
+        showToast("Микрофон не найден");
+      } else {
+        showToast("Не удалось включить микрофон");
+      }
+      return false;
+    }
+  }
+
   function initSpeech() {
+    if (!btnMic) return;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
       btnMic.addEventListener("click", () =>
-        showToast("Голос удобнее в Chrome или Safari")
+        showToast("Диктовка нужна в Chrome или Safari (на iPhone — Safari)")
       );
       return;
     }
-    recognition = new SR();
-    recognition.lang = "ru-RU";
-    recognition.interimResults = false;
-    recognition.continuous = false;
-    recognition.onstart = () => {
-      recognizing = true;
-      btnMic.classList.add("recording");
-      showToast("Говорите — слушаю…");
-    };
-    recognition.onerror = (e) => {
-      recognizing = false;
-      btnMic.classList.remove("recording");
-      if (e.error === "not-allowed") showToast("Нужен доступ к микрофону");
-      else if (e.error !== "aborted") showToast("Не удалось распознать речь");
-    };
-    recognition.onend = () => {
-      recognizing = false;
-      btnMic.classList.remove("recording");
-    };
-    recognition.onresult = (event) => {
-      const text = event.results[0][0].transcript;
-      input.value = (input.value ? input.value + " " : "") + text.trim();
-      autosize();
-    };
-    btnMic.addEventListener("click", () => {
-      if (busy) return;
-      if (recognizing) {
-        recognition.stop();
+    recognition = ensureSpeechEngine();
+
+    btnMic.addEventListener("click", async () => {
+      if (busy || speechStarting) return;
+      if (recognizing && recognition) {
+        try {
+          recognition.stop();
+        } catch (_) {}
         return;
       }
+      const ok = await requestMicAccess();
+      if (!ok) return;
+      speechStarting = true;
+      speechBase = (input.value || "").trim();
       try {
+        // новый экземпляр — стабильнее после ошибок на телефоне
+        recognition = ensureSpeechEngine();
         recognition.start();
-      } catch (_) {
-        showToast("Подождите секунду");
+      } catch (err) {
+        speechStarting = false;
+        try {
+          recognition = ensureSpeechEngine();
+          recognition.start();
+        } catch (_) {
+          showToast("Подожди секунду и нажми микрофон снова");
+        }
       }
     });
   }
@@ -1612,21 +1697,14 @@
     root.innerHTML = `
       ${install}
       ${hero}
+      <div class="home-grid">
+        <button type="button" class="mini-tile" data-go="meditate"><b>Медитации</b><span>аудио ко сну</span></button>
+        <button type="button" class="mini-tile" data-go="dreams"><b>Сны</b><span>толкование в чате</span></button>
+      </div>
       ${askCard}
       ${dayCard}
       <h3 class="shelf-title">Разборы</h3>
       <div class="shelf-grid">${shelf}</div>
-      <div class="home-ask card">
-        <div class="card-body">
-          <p class="eyebrow">Ещё в приложении</p>
-          <h3>Сны и медитации</h3>
-          <p>Расшифровка сна и практики ко сну.</p>
-          <button type="button" class="btn btn-ghost" data-go="dreams">Чат снов</button>
-        </div>
-      </div>
-      <div class="home-grid home-grid-one">
-        <button type="button" class="mini-tile" data-go="meditate"><b>Медитации</b><span>практики ко сну</span></button>
-      </div>
       <p class="note">${escapeHtml((window.NUMEROLOGY && NUMEROLOGY.note) || "")}</p>
     `;
 
