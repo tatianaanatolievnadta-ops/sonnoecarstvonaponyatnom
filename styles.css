@@ -358,10 +358,31 @@ body {
 
 .field {
   width: 100%; margin: .35rem 0 .8rem; padding: .75rem .9rem;
-  border-radius: .9rem; border: 1px solid var(--line); background: rgba(255,255,255,.04);
-  color: var(--text); font: inherit; outline: none;
+  border-radius: .9rem; border: 1px solid #c8c8c8; background: #fff;
+  color: #111; font: inherit; outline: none;
+  -webkit-text-fill-color: #111;
+  color-scheme: light;
 }
-.field:focus { border-color: rgba(212,176,122,.5); }
+.field:focus { border-color: #b08a4c; box-shadow: 0 0 0 2px rgba(176,138,76,.25); }
+.field:disabled {
+  background: #f0f0f0; color: #555; -webkit-text-fill-color: #555;
+}
+select.field {
+  background-color: #fff;
+  color: #111;
+  -webkit-text-fill-color: #111;
+}
+select.field option,
+select.field optgroup {
+  background: #fff;
+  color: #111;
+}
+.date-row .field,
+.time-row .field {
+  background: #fff;
+  color: #111;
+  -webkit-text-fill-color: #111;
+}
 .select-row { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
 
 .history-item {
