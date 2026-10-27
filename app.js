@@ -1527,13 +1527,16 @@
 
     let hero = "";
     if (natal) {
+      const miniWheel =
+        window.Natal && Natal.wheelSvg ? Natal.wheelSvg(natal, { size: 280 }) : "";
       hero = `
         <div class="num-hero">
           <p class="num-kicker">Натальная карта · бесплатно</p>
+          <div class="natal-wheel-wrap natal-wheel-wrap--mini">${miniWheel}</div>
           <h3>Солнце в ${escapeHtml(natal.sun.sign)}</h3>
           <p>Луна · ${escapeHtml(natal.moon.sign)} · ASC · ${escapeHtml(natal.asc.sign)}</p>
           <div class="num-chips">
-            <span>${escapeHtml(natal.city || "город")}</span>
+            <span>${escapeHtml(natal.city || "место")}</span>
             ${snap ? `<span>число · ${snap.karma}</span>` : ""}
           </div>
           <button type="button" class="btn btn-primary" data-go="numbers">Открыть карту</button>
@@ -1706,10 +1709,13 @@
 
     const c = snap.character;
     const natal = getNatalChart();
+    const wheel =
+      natal && window.Natal && Natal.wheelSvg ? Natal.wheelSvg(natal, { size: 420 }) : "";
     const natalBlock = natal
       ? `<div class="card"><div class="card-body">
           <p class="eyebrow">Натальная карта</p>
           <h3>${escapeHtml(natal.city)} · ${escapeHtml(s.birthDate)} · ${String(s.birthHour).padStart(2, "0")}:${String(Number(s.birthMinute) || 0).padStart(2, "0")}</h3>
+          <div class="natal-wheel-wrap">${wheel}</div>
           <p class="note">Солнце · ${escapeHtml(natal.sun.label)} · Луна · ${escapeHtml(natal.moon.label)} · ASC · ${escapeHtml(natal.asc.label)}</p>
           <div class="planet-table">
             ${natal.planets
@@ -1725,8 +1731,8 @@
         </div></div>`
       : `<div class="card"><div class="card-body">
           <p class="eyebrow">Натальная карта</p>
-          <h3>Нужны время и город</h3>
-          <p>Дата уже есть. Добавь час, минуту и город — посчитаю положение планет и асцендент.</p>
+          <h3>Нужны время и место</h3>
+          <p>Дата уже есть. Добавь час, минуту и населённый пункт — нарисую карту планет.</p>
           <button type="button" class="btn btn-primary" data-go="profile">Указать в профиле</button>
         </div></div>`;
 

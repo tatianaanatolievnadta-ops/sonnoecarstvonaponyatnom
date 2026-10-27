@@ -603,6 +603,21 @@ select.field optgroup {
 }
 .date-row.time-row { grid-template-columns: 1fr 1fr; }
 .date-row .field { margin-bottom: 0; }
+.natal-wheel-wrap {
+  margin: .75rem auto .35rem;
+  max-width: 26rem;
+}
+.natal-wheel-wrap--mini {
+  max-width: 16rem;
+  margin: .55rem auto .65rem;
+}
+.natal-wheel {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 50%;
+  filter: drop-shadow(0 8px 24px rgba(0,0,0,.35));
+}
 .planet-table { display: grid; gap: .35rem; margin-top: .65rem; }
 .planet-row {
   display: grid; grid-template-columns: .9fr 1.4fr .7fr; gap: .35rem;
