@@ -383,6 +383,25 @@ select.field optgroup {
   color: #111;
   -webkit-text-fill-color: #111;
 }
+.place-search { margin-bottom: .55rem; }
+.place-status { color: #9dcea8 !important; margin: -.35rem 0 .45rem !important; }
+.place-results {
+  margin: -.35rem 0 .65rem;
+  border: 1px solid #d0d0d0;
+  border-radius: .9rem;
+  background: #fff;
+  overflow: hidden;
+  max-height: 14rem;
+  overflow-y: auto;
+}
+.place-hit {
+  display: block; width: 100%; text-align: left;
+  appearance: none; border: none; border-bottom: 1px solid #eee;
+  background: #fff; color: #111; font: inherit; font-size: .9rem;
+  padding: .7rem .85rem; cursor: pointer;
+}
+.place-hit:last-child { border-bottom: none; }
+.place-hit:hover, .place-hit:focus { background: #f5f0e6; }
 .select-row { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
 
 .history-item {

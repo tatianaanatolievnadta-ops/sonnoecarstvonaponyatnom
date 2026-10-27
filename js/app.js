@@ -79,22 +79,8 @@
     return chart && !chart.error ? chart : null;
   }
 
-  function cityOptionsHtml(selectedId) {
-    const list = window.BIRTH_CITIES || [];
-    return (
-      `<option value="">Выбери город</option>` +
-      list
-        .map(
-          (c) =>
-            `<option value="${escapeAttr(c.id)}" ${selectedId === c.id ? "selected" : ""}>${escapeHtml(c.name)}</option>`
-        )
-        .join("")
-    );
-  }
-
-  function applyCityId(id) {
-    const c = window.Natal ? Natal.findCity(id) : (window.BIRTH_CITIES || []).find((x) => x.id === id);
-    if (!c) {
+  function placePatchFrom(place) {
+    if (!place || place.lat == null || place.lon == null) {
       return {
         birthCityId: "",
         birthCity: "",
@@ -103,13 +89,273 @@
         birthUtcOffset: 3
       };
     }
+    const lat = Number(place.lat);
+    const lon = Number(place.lon);
+    const utc =
+      place.utc != null && Number.isFinite(Number(place.utc))
+        ? Number(place.utc)
+        : Math.round(lon / 15);
     return {
-      birthCityId: c.id,
-      birthCity: c.name,
-      birthLat: c.lat,
-      birthLon: c.lon,
-      birthUtcOffset: c.utc
+      birthCityId: place.id || "geo",
+      birthCity: place.name || place.label || "",
+      birthLat: lat,
+      birthLon: lon,
+      birthUtcOffset: utc
     };
+  }
+
+  function applyCityId(id) {
+    const c = window.Natal ? Natal.findCity(id) : (window.BIRTH_CITIES || []).find((x) => x.id === id);
+    return placePatchFrom(c);
+  }
+
+  function readSelectedPlace(prefix) {
+    const box = $(`${prefix}-place`);
+    if (!box) return null;
+    const lat = box.dataset.lat;
+    const lon = box.dataset.lon;
+    if (lat === "" || lat == null || lon === "" || lon == null) return null;
+    return {
+      id: box.dataset.id || "geo",
+      name: box.dataset.name || ($(`${prefix}-place-q`) && $(`${prefix}-place-q`).value) || "",
+      lat: Number(lat),
+      lon: Number(lon),
+      utc: box.dataset.utc !== "" && box.dataset.utc != null ? Number(box.dataset.utc) : Math.round(Number(lon) / 15)
+    };
+  }
+
+  function setSelectedPlace(prefix, place) {
+    const box = $(`${prefix}-place`);
+    const input = $(`${prefix}-place-q`);
+    const status = $(`${prefix}-place-status`);
+    if (!box || !place) return;
+    box.dataset.id = place.id || "geo";
+    box.dataset.name = place.name || "";
+    box.dataset.lat = String(place.lat);
+    box.dataset.lon = String(place.lon);
+    box.dataset.utc = String(place.utc != null ? place.utc : Math.round(Number(place.lon) / 15));
+    if (input) input.value = place.name || "";
+    if (status) {
+      status.textContent = "Выбрано · можно считать карту";
+      status.hidden = false;
+    }
+  }
+
+  function clearSelectedPlace(prefix) {
+    const box = $(`${prefix}-place`);
+    const status = $(`${prefix}-place-status`);
+    if (!box) return;
+    box.dataset.id = "";
+    box.dataset.name = "";
+    box.dataset.lat = "";
+    box.dataset.lon = "";
+    box.dataset.utc = "";
+    if (status) {
+      status.textContent = "";
+      status.hidden = true;
+    }
+  }
+
+  function placeSearchHtml(prefix, s) {
+    const label = s.birthCity || "";
+    const has =
+      s.birthLat != null && s.birthLon != null && Number.isFinite(Number(s.birthLat));
+    return `
+      <div class="place-search" id="${prefix}-place"
+        data-id="${escapeAttr(s.birthCityId || "")}"
+        data-name="${escapeAttr(label)}"
+        data-lat="${has ? escapeAttr(String(s.birthLat)) : ""}"
+        data-lon="${has ? escapeAttr(String(s.birthLon)) : ""}"
+        data-utc="${escapeAttr(String(s.birthUtcOffset != null ? s.birthUtcOffset : ""))}">
+        <label class="note" for="${prefix}-place-q">Место рождения</label>
+        <input class="field" id="${prefix}-place-q" type="search" autocomplete="off"
+          placeholder="Город, деревня, посёлок — любая страна"
+          value="${escapeAttr(label)}" />
+        <p class="note place-status" id="${prefix}-place-status" ${has ? "" : "hidden"}>
+          ${has ? "Выбрано · можно считать карту" : ""}
+        </p>
+        <div class="place-results" id="${prefix}-place-results" hidden></div>
+        <p class="note">Пиши название — найду по всему миру: города, сёла, посёлки.</p>
+      </div>`;
+  }
+
+  function offsetFromLon(lon) {
+    return Math.round(Number(lon) / 15);
+  }
+
+  async function lookupUtcOffset(lat, lon) {
+    try {
+      const url =
+        "https://timeapi.io/api/timezone/coordinate?latitude=" +
+        encodeURIComponent(lat) +
+        "&longitude=" +
+        encodeURIComponent(lon);
+      const res = await fetch(url);
+      if (!res.ok) return offsetFromLon(lon);
+      const data = await res.json();
+      const raw =
+        data.currentUtcOffset && data.currentUtcOffset.seconds != null
+          ? data.currentUtcOffset.seconds / 3600
+          : data.standardUtcOffset && data.standardUtcOffset.seconds != null
+            ? data.standardUtcOffset.seconds / 3600
+            : null;
+      if (raw == null || !Number.isFinite(raw)) return offsetFromLon(lon);
+      return Math.round(raw);
+    } catch (_) {
+      return offsetFromLon(lon);
+    }
+  }
+
+  function formatPlaceLabel(item) {
+    const a = item.address || {};
+    const name =
+      a.city ||
+      a.town ||
+      a.village ||
+      a.hamlet ||
+      a.municipality ||
+      a.suburb ||
+      a.county ||
+      item.name ||
+      "";
+    const parts = [name, a.state, a.country].filter(Boolean);
+    // unique consecutive
+    const uniq = [];
+    parts.forEach((p) => {
+      if (!uniq.length || uniq[uniq.length - 1] !== p) uniq.push(p);
+    });
+    return uniq.join(", ") || item.display_name || name;
+  }
+
+  async function searchPlaces(query) {
+    const q = String(query || "").trim();
+    if (q.length < 2) return [];
+    const local = (window.BIRTH_CITIES || [])
+      .filter((c) => c.name.toLowerCase().includes(q.toLowerCase()))
+      .slice(0, 4)
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        lat: c.lat,
+        lon: c.lon,
+        utc: c.utc,
+        source: "local"
+      }));
+    try {
+      const url =
+        "https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=8&accept-language=ru&q=" +
+        encodeURIComponent(q);
+      const res = await fetch(url, {
+        headers: { Accept: "application/json" }
+      });
+      if (!res.ok) return local;
+      const rows = await res.json();
+      const allow = new Set([
+        "city",
+        "town",
+        "village",
+        "hamlet",
+        "municipality",
+        "suburb",
+        "neighbourhood",
+        "locality",
+        "isolated_dwelling",
+        "farm",
+        "allotments",
+        "administrative"
+      ]);
+      const remote = (Array.isArray(rows) ? rows : [])
+        .filter((r) => {
+          const t = (r.type || "").toLowerCase();
+          const c = (r.class || "").toLowerCase();
+          if (c === "place") return true;
+          if (c === "boundary" && t === "administrative") return true;
+          return allow.has(t);
+        })
+        .map((r) => ({
+          id: "osm-" + r.place_id,
+          name: formatPlaceLabel(r),
+          lat: Number(r.lat),
+          lon: Number(r.lon),
+          utc: offsetFromLon(r.lon),
+          source: "osm"
+        }))
+        .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && p.name);
+      // local first, then remote without duplicate names
+      const seen = new Set(local.map((x) => x.name.toLowerCase()));
+      const merged = local.slice();
+      remote.forEach((p) => {
+        const key = p.name.toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          merged.push(p);
+        }
+      });
+      return merged.slice(0, 10);
+    } catch (_) {
+      return local;
+    }
+  }
+
+  function wirePlaceSearch(prefix, onPick) {
+    const input = $(`${prefix}-place-q`);
+    const results = $(`${prefix}-place-results`);
+    if (!input || !results) return;
+    let timer = null;
+    let reqId = 0;
+
+    const renderList = (items) => {
+      if (!items.length) {
+        results.hidden = true;
+        results.innerHTML = "";
+        return;
+      }
+      results.hidden = false;
+      results.innerHTML = items
+        .map(
+          (p, i) =>
+            `<button type="button" class="place-hit" data-i="${i}">${escapeHtml(p.name)}</button>`
+        )
+        .join("");
+      results.querySelectorAll(".place-hit").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const place = items[Number(btn.dataset.i)];
+          if (!place) return;
+          btn.disabled = true;
+          btn.textContent = "Секунду…";
+          const utc = await lookupUtcOffset(place.lat, place.lon);
+          place.utc = utc;
+          setSelectedPlace(prefix, place);
+          results.hidden = true;
+          results.innerHTML = "";
+          if (onPick) onPick(place);
+          blockObNext(350);
+        });
+      });
+    };
+
+    input.addEventListener("input", () => {
+      clearSelectedPlace(prefix);
+      const q = input.value.trim();
+      clearTimeout(timer);
+      if (q.length < 2) {
+        results.hidden = true;
+        results.innerHTML = "";
+        return;
+      }
+      timer = setTimeout(async () => {
+        const my = ++reqId;
+        results.hidden = false;
+        results.innerHTML = `<p class="note" style="margin:.4rem .2rem">Ищу…</p>`;
+        const items = await searchPlaces(q);
+        if (my !== reqId) return;
+        if (!items.length) {
+          results.innerHTML = `<p class="note" style="margin:.4rem .2rem">Ничего не нашла — попробуй другое написание</p>`;
+          return;
+        }
+        renderList(items);
+      }, 380);
+    });
   }
 
   function timeSelectHtml(prefix, hourVal, minuteVal) {
@@ -1573,15 +1819,13 @@
         ${birthSelectHtml("ob-birth", s.birthDate)}
         <p class="note" style="margin:0 0 .35rem">Время рождения</p>
         ${timeSelectHtml("ob", s.birthHour, s.birthMinute)}
-        <label class="note" for="ob-city">Город рождения</label>
-        <select class="field" id="ob-city">${cityOptionsHtml(s.birthCityId)}</select>
-        <p class="note">Время и город нужны для асцендента и домов. Если время не знаешь — числа всё равно посчитаю.</p>`;
+        ${placeSearchHtml("ob", s)}
+        <p class="note">Время и место нужны для асцендента и домов. Если время не знаешь — числа всё равно посчитаю.</p>`;
       next.textContent = "Дальше";
       blockObNext(500);
       wireBirthSelect("ob-birth", () => blockObNext(350));
       wireTimeSelect("ob");
-      const cityEl = $("ob-city");
-      if (cityEl) cityEl.addEventListener("change", () => blockObNext(350));
+      wirePlaceSearch("ob", () => blockObNext(350));
     } else {
       const snap = getSnap();
       const c = snap && snap.character;
@@ -1629,9 +1873,9 @@
       }
       const hour = $("ob-hour") ? $("ob-hour").value : "";
       const minute = $("ob-min") ? $("ob-min").value : "0";
-      const cityId = $("ob-city") ? $("ob-city").value : "";
-      if (hour !== "" && !cityId) {
-        showToast("Для карты укажи город рождения");
+      const place = readSelectedPlace("ob");
+      if (hour !== "" && !place) {
+        showToast("Выбери место из списка — город, деревню или посёлок");
         return;
       }
       Store.update(
@@ -1641,7 +1885,7 @@
             birthHour: hour,
             birthMinute: hour === "" ? "0" : minute || "0"
           },
-          applyCityId(cityId)
+          placePatchFrom(place)
         )
       );
       obStep = 2;
@@ -1668,8 +1912,7 @@
         ${birthSelectHtml("prof-birth", s.birthDate)}
         <p class="note" style="margin:0 0 .35rem">Время рождения</p>
         ${timeSelectHtml("prof", s.birthHour, s.birthMinute)}
-        <label class="note" for="prof-city">Город рождения</label>
-        <select class="field" id="prof-city">${cityOptionsHtml(s.birthCityId)}</select>
+        ${placeSearchHtml("prof", s)}
         <button type="button" class="btn btn-primary" id="save-name">Сохранить</button>
       </div></div>
 
@@ -1767,6 +2010,7 @@
     paintHistory();
     wireBirthSelect("prof-birth");
     wireTimeSelect("prof");
+    wirePlaceSearch("prof");
 
     $("save-name").onclick = () => {
       const dEl = $("prof-birth-d");
@@ -1780,9 +2024,9 @@
       }
       const hour = $("prof-hour") ? $("prof-hour").value : "";
       const minute = $("prof-min") ? $("prof-min").value : "0";
-      const cityId = $("prof-city") ? $("prof-city").value : "";
-      if (hour !== "" && !cityId) {
-        showToast("Для карты укажи город рождения");
+      const place = readSelectedPlace("prof");
+      if (hour !== "" && !place) {
+        showToast("Выбери место из списка — город, деревню или посёлок");
         return;
       }
       Store.update(
@@ -1793,10 +2037,10 @@
             birthHour: hour,
             birthMinute: hour === "" ? "0" : minute || "0"
           },
-          applyCityId(cityId)
+          placePatchFrom(place)
         )
       );
-      showToast(hour !== "" && cityId ? "Сохранено · карта обновлена" : "Сохранено");
+      showToast(hour !== "" && place ? "Сохранено · карта обновлена" : "Сохранено");
     };
 
     $("tog-history").onchange = (e) => {
