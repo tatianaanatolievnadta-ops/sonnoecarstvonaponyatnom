@@ -7,8 +7,8 @@
  */
 window.YOOKASSA = {
   shopId: "1508604",
-  createPaymentUrl: "", // например "https://sonnoe-pay.твой-аккаунт.workers.dev/create"
-  checkPaymentUrl: "", // тот же воркер + "/status?id="
+  createPaymentUrl: "https://broken-bread-6637.tatiana-anatolyevna-dta.workers.dev/create",
+  checkPaymentUrl: "https://broken-bread-6637.tatiana-anatolyevna-dta.workers.dev/status",
   returnBase:
     "https://tatianaanatolievnadta-ops.github.io/sonnoecarstvonaponyatnom/pay-success.html",
   catalog: {
