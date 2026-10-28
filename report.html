@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#121a2e" />
+  <title>Разбор — Сонное царство</title>
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="css/legal.css" />
+  <style>
+    .report-body {
+      margin-top: 1rem; padding: 1rem 1.05rem;
+      border-radius: var(--radius); border: 1px solid rgba(212,176,122,.28);
+      background: var(--bg-elev); color: #e4ebf8; font-size: .95rem; line-height: 1.55;
+      white-space: pre-wrap;
+    }
+    .report-body p { margin: 0 0 .75rem; }
+  </style>
+</head>
+<body>
+  <div class="sky" aria-hidden="true"><div class="glow glow-a"></div><div class="glow glow-b"></div><div class="stars"></div></div>
+  <main class="legal">
+    <a class="back" href="./index.html">← На главную</a>
+    <h1 id="title">Разбор</h1>
+    <p class="lead" id="lead">…</p>
+    <div class="report-body" id="body">Загружаю…</div>
+    <p class="hint" id="hint"></p>
+    <p style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap">
+      <a class="btn btn-ghost" href="prices.html" style="text-decoration:none">Цены</a>
+      <a class="btn btn-ghost" href="./index.html#numbers" style="text-decoration:none" id="to-map">К карте</a>
+    </p>
+  </main>
+  <script src="data/yookassa.js"></script>
+  <script src="yookassa.js"></script>
+  <script src="data/numerology.js"></script>
+  <script src="numerology.js"></script>
+  <script src="data/paid-content.js"></script>
+  <script src="paid-content.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="storage.js"></script>
+  <script src="js/numerology.js"></script>
+  <script src="numerology-engine.js"></script>
+  <script>
+    (function () {
+      var item = new URLSearchParams(location.search).get("item") || "problem";
+      var Y = window.YOOKASSA || {};
+      var info = (Y.catalog && Y.catalog[item]) || { title: "Разбор" };
+      var title = document.getElementById("title");
+      var lead = document.getElementById("lead");
+      var body = document.getElementById("body");
+      var hint = document.getElementById("hint");
+      title.textContent = info.title || "Разбор";
+      document.title = (info.title || "Разбор") + " — Сонное царство";
+
+      function locked() {
+        lead.textContent = "Этот разбор открывается после оплаты.";
+        body.textContent = "Перейди к оформлению — после оплаты текст появится здесь автоматически.";
+        hint.innerHTML =
+          '<a class="btn btn-primary" style="display:inline-flex;text-decoration:none;margin-top:.5rem" href="pay.html?item=' +
+          encodeURIComponent(item) +
+          '">Оформить · ' +
+          (info.price || "") +
+          "</a>";
+      }
+
+      if (!window.Store || !Store.hasPurchase(item)) {
+        locked();
+        return;
+      }
+
+      var s = Store.get();
+      var snap = window.Numero && s.birthDate ? Numero.snapshot(s.birthDate, { birthHour: s.birthHour }) : null;
+      var PC = window.PAID_CONTENT || {};
+      var text = "";
+
+      if (item === "problem") {
+        var n = snap ? String(snap.problem) : "1";
+        text = (PC.problem && (PC.problem[n] || PC.problem["1"])) || "";
+        lead.textContent =
+          "Число проблемы · " +
+          n +
+          (snap && snap.planetProblem ? " · " + snap.planetProblem.name : "");
+      } else if (item === "character-full") {
+        var k = snap ? String(snap.karma) : "1";
+        var base = snap && snap.character
+          ? snap.character.title + "\n\n" + snap.character.lead + "\n\nСильная сторона: " + snap.character.strength + "\n\nСлепая зона: " + snap.character.shadow + "\n\n"
+          : "";
+        text = base + ((PC.characterExtra && (PC.characterExtra[k] || PC.characterExtra["1"])) || "");
+        lead.textContent = "Полный разбор характера · " + k;
+      } else if (item === "year") {
+        var y = snap ? String(snap.year) : "1";
+        text = (PC.year && (PC.year[y] || PC.year["1"])) || "";
+        lead.textContent =
+          "Личный год · " + y + (snap && snap.planetYear ? " · " + snap.planetYear.name : "");
+      } else if (item === "compat") {
+        lead.textContent = "Совместимость";
+        text =
+          "Для полного разбора укажи вторую дату в следующем обновлении. Пока ориентир: сравни числа характера двух людей по материалам совместимости.\n\n" +
+          (PC.note || "");
+        if (snap) {
+          var key = snap.karma + "-" + snap.karma;
+          text += "\n\nТвоё число характера: " + snap.karma + ".\n" + ((PC.compat && PC.compat[key]) || "");
+        }
+      } else if (item === "sub") {
+        lead.textContent = "Подписка активна";
+        var until = s.subscriptionUntil ? new Date(s.subscriptionUntil).toLocaleDateString("ru-RU") : "";
+        text =
+          "Подписка «Мои числа» открыта" +
+          (until ? " до " + until : "") +
+          ".\n\nЭнергия дня, месяца и года — во вкладке «Карта». Напоминания включаются в профиле.";
+        if (snap && snap.dayInfo) {
+          text += "\n\nСегодня · " + snap.dayInfo.title + "\n" + snap.dayInfo.do + "\nНе сейчас: " + snap.dayInfo.dont;
+        }
+      } else if (item === "dream-deep") {
+        lead.textContent = "Глубокий разбор сна";
+        text =
+          "Открой вкладку «Сны», опиши сон — расшифровка учтёт твои числа" +
+          (snap ? " (характер " + snap.karma + ", проблема " + snap.problem + ")" : "") +
+          ".";
+      } else {
+        text = "Разбор скоро дополнится.";
+      }
+
+      if (!text) {
+        body.textContent = "Текст ещё собирается из материалов. Напиши на почту — пришлём вручную.";
+      } else {
+        body.textContent = text;
+      }
+      hint.textContent = PC.note || "Информационно-развлекательный характер.";
+    })();
+  </script>
+</body>
+</html>

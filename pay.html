@@ -27,6 +27,11 @@
       border-radius: .9rem; border: 1px solid rgba(224,154,154,.4);
       background: rgba(180,70,70,.12); color: #f0d0d0; font-size: .9rem; line-height: 1.45;
     }
+    .pay-ok {
+      margin: 1rem 0 0; padding: .85rem .9rem;
+      border-radius: .9rem; border: 1px solid rgba(120,180,120,.4);
+      background: rgba(60,120,70,.15); color: #d0f0d4; font-size: .9rem; line-height: 1.45;
+    }
     .pay-actions { display: grid; gap: .55rem; margin-top: 1.1rem; }
     .pay-actions .btn { width: 100%; text-align: center; text-decoration: none; }
     .btn[disabled], .btn.is-disabled {
@@ -39,22 +44,19 @@
   <main class="legal">
     <a class="back" href="./index.html">← На главную</a>
     <h1>Оформление</h1>
-    <p class="lead">Выбор услуги. Оплата картой и СБП появится после подключения ЮKassa.</p>
+    <p class="lead">Оплата картой или СБП через ЮKassa. После оплаты разбор откроется автоматически.</p>
 
     <div class="pay-box" id="pay-box">
       <p class="num-kicker" style="margin:0;color:var(--accent);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase">Услуга</p>
       <h2 id="pay-title">…</h2>
       <div class="sum" id="pay-price">…</div>
       <p id="pay-meta" style="margin:0;color:var(--muted);font-size:.88rem"></p>
-      <div class="pay-warn" role="status">
-        Сейчас оплатить нельзя: платёж ещё подключается. Цены уже зафиксированы на сайте —
-        когда ЮKassa одобрит магазин, кнопка оплаты заработает здесь же.
-      </div>
+      <div id="pay-status" class="pay-warn" role="status">Проверяю настройки оплаты…</div>
       <div class="pay-actions">
-        <button type="button" class="btn btn-primary is-disabled" disabled aria-disabled="true">Оплатить — скоро</button>
+        <button type="button" class="btn btn-primary is-disabled" id="pay-btn" disabled>Оплатить</button>
+        <a class="btn btn-ghost" id="open-report" href="report.html" hidden style="text-decoration:none">Уже куплено — открыть</a>
         <a class="btn btn-ghost" href="prices.html">Все цены</a>
         <a class="btn btn-ghost" href="offer.html">Оферта</a>
-        <a class="btn btn-ghost" href="mailto:tatiana.anatolievna.dta@gmail.com?subject=Сонное%20царство%20—%20хочу%20оплатить">Написать на почту</a>
       </div>
     </div>
 
@@ -63,46 +65,85 @@
       <a href="requisites.html" style="color:var(--accent)">Реквизиты</a>
     </p>
   </main>
+  <script src="js/storage.js"></script>
+  <script src="storage.js"></script>
+  <script src="data/yookassa.js"></script>
+  <script src="yookassa.js"></script>
   <script>
     (function () {
-      var CATALOG = {
-        sub: {
-          title: "Подписка «Мои числа»",
-          price: "390 ₽",
-          meta: "30 дней: энергия дня / месяца / года и напоминания"
-        },
-        problem: {
-          title: "Число проблемы",
-          price: "490 ₽",
-          meta: "Полный разбор — где застреваете и что прорабатывать"
-        },
-        "character-full": {
-          title: "Полный разбор характера",
-          price: "490 ₽",
-          meta: "Сильные стороны, тень и как с этим жить"
-        },
-        year: {
-          title: "Личный год",
-          price: "990 ₽",
-          meta: "12 месяцев по твоей дате рождения"
-        },
-        compat: {
-          title: "Совместимость",
-          price: "490 ₽",
-          meta: "Два числа — картина отношений"
-        },
-        "dream-deep": {
-          title: "Глубокий разбор сна",
-          price: "490 ₽",
-          meta: "Дополнительно: сон через твои числа"
-        }
-      };
+      var Y = window.YOOKASSA || {};
+      var catalog = Y.catalog || {};
       var id = new URLSearchParams(location.search).get("item") || "sub";
-      var item = CATALOG[id] || CATALOG.sub;
+      var item = catalog[id] || catalog.sub;
+      if (!item) return;
+
       document.getElementById("pay-title").textContent = item.title;
       document.getElementById("pay-price").textContent = item.price;
-      document.getElementById("pay-meta").textContent = item.meta;
+      document.getElementById("pay-meta").textContent = item.meta || "";
       document.title = item.title + " — Сонное царство";
+      document.getElementById("open-report").href = "report.html?item=" + encodeURIComponent(id);
+
+      var statusEl = document.getElementById("pay-status");
+      var btn = document.getElementById("pay-btn");
+      var openBtn = document.getElementById("open-report");
+
+      if (window.Store && Store.hasPurchase(id)) {
+        statusEl.className = "pay-ok";
+        statusEl.textContent = "Эта позиция уже открыта на этом устройстве.";
+        openBtn.hidden = false;
+        btn.hidden = true;
+        return;
+      }
+
+      var ready = !!(Y.createPaymentUrl && Y.shopId);
+      if (!ready) {
+        statusEl.className = "pay-warn";
+        statusEl.textContent =
+          "ЮKassa подключена в кабинете. Осталось вписать shopId и URL оплаты в настройки сайта — напиши ассистенту shopId, дальше подключим кнопку.";
+        return;
+      }
+
+      statusEl.className = "pay-ok";
+      statusEl.textContent = "Можно оплатить. После оплаты разбор откроется сам.";
+      btn.disabled = false;
+      btn.classList.remove("is-disabled");
+      btn.textContent = "Оплатить " + item.price;
+
+      btn.addEventListener("click", async function () {
+        btn.disabled = true;
+        btn.textContent = "Создаю платёж…";
+        try {
+          var returnUrl =
+            (Y.returnBase || location.origin + location.pathname.replace(/pay\.html.*/, "pay-success.html")) +
+            "?item=" +
+            encodeURIComponent(id);
+          var res = await fetch(Y.createPaymentUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              item: id,
+              amount: item.amount,
+              description: item.title,
+              return_url: returnUrl
+            })
+          });
+          var data = await res.json();
+          if (!res.ok || !data.confirmation_url) {
+            throw new Error((data && data.error) || "fail");
+          }
+          if (data.id) {
+            try {
+              sessionStorage.setItem("sonnoe-pending-payment", JSON.stringify({ id: data.id, item: id }));
+            } catch (_) {}
+          }
+          location.href = data.confirmation_url;
+        } catch (e) {
+          statusEl.className = "pay-warn";
+          statusEl.textContent = "Не получилось создать платёж. Проверь Worker и ключи ЮKassa.";
+          btn.disabled = false;
+          btn.textContent = "Оплатить " + item.price;
+        }
+      });
     })();
   </script>
 </body>

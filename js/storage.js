@@ -15,6 +15,9 @@
     birthUtcOffset: 3,
     freeQuestionsLeft: 3,
     freeQuestions: [],
+    purchases: {},
+    subscriptionUntil: "",
+    lastPaymentId: "",
     priority: "dreams",
     onboardingDone: false,
     installBannerDismissed: false,
@@ -48,6 +51,7 @@
         directions: Object.assign({}, defaults.directions, parsed.directions || {}),
         notify: Object.assign({}, defaults.notify, parsed.notify || {}),
         quizResults: Object.assign({}, defaults.quizResults, parsed.quizResults || {}),
+        purchases: Object.assign({}, defaults.purchases, parsed.purchases || {}),
         history: Array.isArray(parsed.history) ? parsed.history : []
       });
     } catch (_) {
@@ -91,5 +95,48 @@
     return update({ history: [] });
   }
 
-  global.Store = { get, update, addHistory, clearHistory, defaults };
+  function hasPurchase(itemId) {
+    const s = load();
+    if (itemId === "sub") {
+      if (!s.subscriptionUntil) return false;
+      return new Date(s.subscriptionUntil).getTime() > Date.now();
+    }
+    return !!(s.purchases && s.purchases[itemId]);
+  }
+
+  function unlockPurchase(itemId, meta) {
+    const s = load();
+    const purchases = Object.assign({}, s.purchases || {});
+    const patch = {
+      purchases,
+      lastPaymentId: (meta && meta.paymentId) || s.lastPaymentId || ""
+    };
+    const catalog = (global.YOOKASSA && global.YOOKASSA.catalog) || {};
+    const info = catalog[itemId] || {};
+    if (info.kind === "subscription" || itemId === "sub") {
+      const days = info.days || 30;
+      const base = s.subscriptionUntil && new Date(s.subscriptionUntil) > new Date()
+        ? new Date(s.subscriptionUntil)
+        : new Date();
+      base.setDate(base.getDate() + days);
+      patch.subscriptionUntil = base.toISOString();
+      purchases.sub = true;
+    } else {
+      purchases[itemId] = {
+        at: new Date().toISOString(),
+        paymentId: (meta && meta.paymentId) || ""
+      };
+    }
+    return update(patch);
+  }
+
+  global.Store = {
+    get,
+    update,
+    addHistory,
+    clearHistory,
+    hasPurchase,
+    unlockPurchase,
+    defaults
+  };
 })(window);

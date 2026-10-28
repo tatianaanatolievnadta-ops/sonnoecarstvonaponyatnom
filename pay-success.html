@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#121a2e" />
+  <title>Оплата прошла — Сонное царство</title>
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="css/legal.css" />
+</head>
+<body>
+  <div class="sky" aria-hidden="true"><div class="glow glow-a"></div><div class="glow glow-b"></div><div class="stars"></div></div>
+  <main class="legal">
+    <a class="back" href="./index.html">← На главную</a>
+    <h1 id="title">Проверяю оплату…</h1>
+    <p class="lead" id="lead">Секунду — сверю платёж с ЮKassa и открою разбор.</p>
+    <p class="hint" id="hint"></p>
+    <p style="margin-top:1rem">
+      <a class="btn btn-primary" id="go-report" href="report.html" style="display:none;text-decoration:none">Открыть разбор</a>
+    </p>
+  </main>
+  <script src="js/storage.js"></script>
+  <script src="storage.js"></script>
+  <script src="data/yookassa.js"></script>
+  <script src="yookassa.js"></script>
+  <script>
+    (function () {
+      var params = new URLSearchParams(location.search);
+      var item = params.get("item") || "";
+      var paymentId = params.get("payment_id") || params.get("id") || "";
+      var Y = window.YOOKASSA || {};
+      var title = document.getElementById("title");
+      var lead = document.getElementById("lead");
+      var hint = document.getElementById("hint");
+      var go = document.getElementById("go-report");
+
+      try {
+        var pending = JSON.parse(sessionStorage.getItem("sonnoe-pending-payment") || "null");
+        if (pending) {
+          if (!item && pending.item) item = pending.item;
+          if (!paymentId && pending.id) paymentId = pending.id;
+        }
+      } catch (_) {}
+
+      go.href = "report.html?item=" + encodeURIComponent(item || "problem");
+
+      function unlockOk(pid) {
+        if (window.Store && item) {
+          Store.unlockPurchase(item, { paymentId: pid || "" });
+        }
+        try { sessionStorage.removeItem("sonnoe-pending-payment"); } catch (_) {}
+        title.textContent = "Оплата прошла";
+        lead.textContent = "Доступ открыт. Разбор уже можно читать.";
+        go.style.display = "inline-flex";
+        setTimeout(function () {
+          location.href = go.href;
+        }, 900);
+      }
+
+      function fail(msg) {
+        title.textContent = "Пока не подтвердили";
+        lead.textContent = msg || "Если списание прошло — напиши на почту, откроем вручную.";
+        hint.innerHTML =
+          'Почта: <a href="mailto:tatiana.anatolievna.dta@gmail.com" style="color:var(--accent)">tatiana.anatolievna.dta@gmail.com</a>';
+        go.style.display = "inline-flex";
+        go.textContent = "На главную";
+        go.href = "./index.html";
+      }
+
+      async function run() {
+        if (!item) {
+          fail("Не поняла, какую услугу оплатили.");
+          return;
+        }
+        if (!paymentId || !Y.checkPaymentUrl) {
+          // Без проверки статуса — открываем по возврату (временный режим до Worker)
+          unlockOk("");
+          return;
+        }
+        try {
+          var res = await fetch(
+            Y.checkPaymentUrl.replace(/\/?$/, "") + "?id=" + encodeURIComponent(paymentId)
+          );
+          var data = await res.json();
+          if (data.paid || data.status === "succeeded") {
+            unlockOk(data.id || paymentId);
+            return;
+          }
+          if (data.status === "pending" || data.status === "waiting_for_capture") {
+            title.textContent = "Платёж ещё обрабатывается";
+            lead.textContent = "Обнови страницу через минуту — доступ откроется сам.";
+            go.style.display = "inline-flex";
+            go.textContent = "Проверить снова";
+            go.href = location.href;
+            return;
+          }
+          fail("Статус платежа: " + (data.status || "неизвестен"));
+        } catch (_) {
+          fail("Не удалось связаться с проверкой оплаты.");
+        }
+      }
+
+      run();
+    })();
+  </script>
+</body>
+</html>

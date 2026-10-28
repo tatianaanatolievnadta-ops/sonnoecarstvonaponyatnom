@@ -1673,14 +1673,15 @@
       </div>`;
 
     const shelf = (window.NUMEROLOGY && NUMEROLOGY.shelf ? NUMEROLOGY.shelf : [])
-      .map(
-        (x) => `
-        <button type="button" class="shelf-tile" data-shelf="${x.id}">
+      .map((x) => {
+        const owned = window.Store && Store.hasPurchase(x.id);
+        return `
+        <button type="button" class="shelf-tile" data-shelf="${x.id}" data-owned="${owned ? "1" : "0"}">
           <span class="t">${escapeHtml(x.title)}</span>
-          <span class="m">${escapeHtml(x.meta)}</span>
-          <span class="p">${escapeHtml(x.price)}</span>
-        </button>`
-      )
+          <span class="m">${escapeHtml(owned ? "Открыто — читать" : x.meta)}</span>
+          <span class="p">${escapeHtml(owned ? "✓" : x.price)}</span>
+        </button>`;
+      })
       .join("");
 
     const past = (s.freeQuestions || [])
@@ -1716,7 +1717,12 @@
     });
     root.querySelectorAll("[data-shelf]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        location.href = "pay.html?item=" + encodeURIComponent(btn.dataset.shelf || "sub");
+        const sid = btn.dataset.shelf || "sub";
+        if (btn.dataset.owned === "1") {
+          location.href = "report.html?item=" + encodeURIComponent(sid);
+        } else {
+          location.href = "pay.html?item=" + encodeURIComponent(sid);
+        }
       });
     });
     const askSend = $("ask-send");
@@ -1838,7 +1844,11 @@
         <h3>Число проблемы · ${snap.problem} · ${escapeHtml(snap.planetProblem.name)}</h3>
         <p>${escapeHtml(snap.problemTeaser)}</p>
         <p class="note">Полный текст — в платном разборе. Экспрессия: ${snap.expression}.</p>
-        <a class="btn btn-primary" href="pay.html?item=problem" style="display:inline-flex;text-decoration:none;margin-top:.35rem">Перейти к оформлению · 490 ₽</a>
+        ${
+          Store.hasPurchase("problem")
+            ? `<a class="btn btn-primary" href="report.html?item=problem" style="display:inline-flex;text-decoration:none;margin-top:.35rem">Открыть полный разбор</a>`
+            : `<a class="btn btn-primary" href="pay.html?item=problem" style="display:inline-flex;text-decoration:none;margin-top:.35rem">Перейти к оформлению · 490 ₽</a>`
+        }
       </div></div>
       <div class="card"><div class="card-body">
         <h3>Данные в расчёте</h3>

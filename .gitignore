@@ -15,6 +15,7 @@ Thumbs.db
 *.log
 _extract_*.txt
 
-data/_articles_tail.js
-data/_splice_articles.js
+yookassa-secret.txt
+*.secret
+.env
 
